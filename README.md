@@ -37,7 +37,6 @@
 10. Список литературы
 11. Приложение
 
-<p align="justify">
+
 ![image](https://user-images.githubusercontent.com/51716145/149184448-f2aab45f-f32a-4a93-bb31-ea8efab5cf4a.png)
-</p>
-Рисунок 1. Блок-схема структуры модели SnoWE
+**Рисунок 1.** Блок-схема структуры модели SnoWE
