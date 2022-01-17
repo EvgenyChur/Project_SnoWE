@@ -42,7 +42,8 @@ The “snow technology” – SMFE is used for work with snow cover on territory
 
 
 ![image](https://user-images.githubusercontent.com/51716145/149184448-f2aab45f-f32a-4a93-bb31-ea8efab5cf4a.png)
-**Рисунок 1.** Blockdiagram of SnoWE structure
+
+**Figure 1.** Blockdiagram of SnoWE structure
 
 ### Documentation languages
 [Russian][1] (full vesion), [English][2] (general topics)
