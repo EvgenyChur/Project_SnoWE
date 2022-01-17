@@ -2,41 +2,53 @@
 
 ### Authors:
 <p align="justify">
-Чурюлин Е.<sup>1</sup>, Копейкин В.<sup>1</sup>, Розинкина И.<sup>1</sup>, Чумаков М.<sup>2</sup>, Казакова Е.<sup>1</sup>
+Churiulin E.<sup>1</sup>, Kopeikin V.<sup>1</sup>, Rozinkina I.<sup>1</sup>, Chumakov M.<sup>2</sup>, Kazakova E.<sup>1</sup>
 </p>
 
-1 - ФГБУ «Гидрометцентр России», 2 – ОАО «Газпром»
+1 - [Hydrometcenter of Russia][3], 2 – Ltd. [Gazprom][4]
   
-Москва, 2020
+Moscow, 2020
+
+### Description
+The “snow technology” – SMFE is used for work with snow cover on territory of the Russian Federation. There are two the most interesting output characteristics of snow cover: snow density (RHO) and snow water equivalent (SWE). The “snow technology” is based on a variety of input parameters and involves a different complex of assimilation initial information. The main feature “snow technology” is work with model data (output data of COSMO-Ru model), satellite data and initial data from a meteorological network (SYNOP-code). We are using “snow technology” for two schemes of calculations: calculating snow parameters on real a meteorological network and calculating it for COSMO grid points. For the territory of Russian Federation, we are applying “snow technology” for three areas of investigation with different model step of special resolution: COSMO-Ru-13-ENA – model step 13 km; area of investigation – all territory of country; COSMO-Ru-ETR – model step 7 km; area of investigation – Europe part of country; COSMORu-2-CFO – model step 2 km; area of investigation – central part of country. Technology has been applied in semi-operational mode for forecasts of spring flood since 2016.
+
+### Documentation content:
   
-### Содержание документации:
-  
-1. Общие представления о модели снежного покрова SnoWE
-2. Запуск и начало работы с моделью снежного покрова SnoWE
-    1. Сборка модели снежного покрова SnoWE
-3. Модуль препроцессинга модели SnoWE
-    1. Константные конфигурационные файлы
-    2. Спутниковые данные о границе снежного покрова
-    3. Загрузка начальных данных о метеорологических параметрах на основе синоптической информации
-    4. Загрузка начальных данных о метеорологических параметрах на основе модельной информации
-    5. Контроль качества загруженных данных
-4. Модуль основного расчетного ядра модели SnoWE
-    1. Физические параметризации расчетного ядра SMFE
-        1. Первое расчетное направление – свежевыпавший снег
-        2. Второе расчетное направление – высота снежного покрова не изменилась
-        3. Третье расчетное направление – высота снежного покрова увеличилась  из-за выпадения влажного снега
-        4. Четвертое расчетное направление – высота снежного покрова увеличилась  из-за выпадения сухого снега
-        5. Пятое расчетное направление – высота снежного покрова уменьшилась  из-за воздействия ветра
-        6. Шестое расчетное направление – высота снежного покрова уменьшилась  из-за его уплотненияж
-        7. Седьмое расчетное направление – высота снежного покрова уменьшилась  из-за его таяния
-5. Модуль постпроцессинга модели снежного покрова SnoWE
-6. Блок визуализации результатов
-7. Архивная версия модели
-8. Дальнейшее развитие
-9. Заключение
-10. Список литературы
-11. Приложение
+1. General overview of SnoWE
+2. First run of SnoWE
+    1. Model assembly
+3. Preprocessing of SnoWE 
+    1. Constant configuration files
+    2. Get satellite data
+    3. Get SINOP data
+    4. Get COSMO-Ru data
+    5. Quality control
+4. Main core of SnoWE
+    1. Physical parameterizations of the calculation kernel SMFE
+        1. First software branch: Case of first snow
+        2. Second software branch: Case of snow depth don’t change
+        3. Third software branch: Case of wet snow falling
+        4. Fourth software branch: Case of dry snow falling
+        5. Fifth software branch: Case of snow blown
+        6. Sixth software branch: Case of snow subsidence
+        7. Seventh software branch: Case of snow melting
+5. Postprocessing of SnoWE
+6. Visualisation of results
+7. Archive version of SnoWE
+8. Future plans
+9. Conclusions
+10. List of references
+11. Appendix
 
 
 ![image](https://user-images.githubusercontent.com/51716145/149184448-f2aab45f-f32a-4a93-bb31-ea8efab5cf4a.png)
-**Рисунок 1.** Блок-схема структуры модели SnoWE
+**Рисунок 1.** Blockdiagram of SnoWE structure
+
+### Documentation languages
+[Russian][1] (full vesion), [English][2] (general topics)
+
+
+[1]: https://github.com/EvgenyChur/Project_SnoWE/blob/master/SnoWE.pdf
+[2]: https://github.com/EvgenyChur/Project_SnoWE/blob/master/SnoWE%20-%20Eng.pdf
+[3]: https://meteoinfo.ru/en/about-us-eng
+[4]: https://www.gazprom.com/
