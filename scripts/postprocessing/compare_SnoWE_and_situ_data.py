@@ -1,303 +1,285 @@
 # -*- coding: utf-8 -*-
 """
-Created on Mon Dec 10 13:04:17 2018
+Description: Create linear plots for SnoWE data
 
-@author: Evgeny Churiulin
+Authors: Evgenii Churiulin
+
+Current Code Owner: Evgenii Churiulin
+phone:  +49  170 261-5104
+email:  evgenychur@bgc-jena.mpg.de
+
+History:
+Version    Date       Name
+---------- ---------- ----
+    1.1    10.12.2018 Evgenii Churiulin, RHMS
+           Initial release
+    1.2    20.04.2023 Evgenii Churiulin, MPI-BGC
+           Global updating of the script (v2.0)
 """
-import pandas as pd 
-import numpy as np
+
+#=============================     Import modules     ======================
+import pandas as pd
 import matplotlib.pyplot as plt
+
+from datetime import datetime, timedelta
+from dateutil.relativedelta import relativedelta
 from matplotlib import rcParams
-import os
-import matplotlib.dates as mdates
-from matplotlib.ticker import FormatStrFormatter, AutoMinorLocator, NullFormatter
 
-minorLocator_1 = AutoMinorLocator (n=1)
-minorFormatter_1 = FormatStrFormatter('%.1f')
+# Personal modules:
+import lib4visualization as l4v
+#=============================   Personal functions   ======================
+def get_data(ipath:str):
+    # Read csv files
+    return pd.read_csv(
+        ipath, skiprows = 0, sep = ';', dayfirst = True, parse_dates = True, 
+        index_col = [0], skipinitialspace = True, na_values = ['9990','********'],
+    )
 
-minorLocator_2 = AutoMinorLocator (n=1)
-minorFormatter_2 = FormatStrFormatter('%.1f')
+def create_table(df_model, df_fact, params:list, pout:str, fn_station:str):
+    # local variables:
+    merge_method = 'inner'
+    # Create output table for the research parameter (model, in-situ):
+    df_mod = df_model[params[0]]
+    df_stat = df_fact[params[1]]
+    # Merge data:
+    df = pd.concat([df_mod, df_stat], axis = 1, join = merge_method)
+    # Save merged dataframe:
+    df.to_csv(
+        pout + f'params[2]_{fn_station[0:5].csv}', sep=';', float_format='%.3f',
+        header = ['model','in situ'], index_label = 'Index'
+    )
 
-minorLocator_3 = AutoMinorLocator (n=1)
-minorFormatter_3 = FormatStrFormatter('%.1f')
+#================   User settings (have to be adapted)  =======================
 
+# Logical settings: 
+lprep_data = False # Do you want to prepare snow data?
+lmain_mode = True  # Do you want to start main calculations and get snow plots ? 
+lprep_gif  = True  # Do you want to get snow data: 
+                   #       1 - for Git plot (1 year)   (used for presentations) 
+                   #       2 - for snow plots by years (main mode) 
 
-years = mdates.YearLocator() #every year
-days = mdates.DayLocator(15)
-yearFmt = mdates.DateFormatter('%Y')
-
-"""
-Функция для построения графиков с двумя переменными: Функция строит график ввиде линий
-pr_1, pr_2 - основные расчетные переменные, далее по ним будет строиться график (нужно чтобы был индекс и значение).
-индекс в формате даты с суточной дискретностью
-na_1, na_2- текст легенды для основных расчетных переменных
-n_3 - подпись заголовка для графика
-n_4 - подпись оси y
-pr_3, pr_4, pr_5 - пределы по шкале y (pr_6 - нижняя отметка, pr_7 - верхняя отметка, pr_8 - шаг)
-pr_6 - параметр вспомогательныъх делений
-l_p - положение легенды
-time_step_1,time_step_2 - временной диапазон
-"""    
-#def plot_2(ax, pr_1, pr_2, na_1, na_2, na_3, na_4, pr_3, pr_4, pr_5, pr_6, l_p, time_step_1, time_step_2):
-def plot_2(ax, pr_1, pr_2, na_1, na_2, na_3, na_4, pr_3, pr_4, pr_5, pr_6, l_p):    
-    #ax.scatter(pr_1.index, pr_1, label = na_1, color = 'b', linestyle = '-')
-    #ax.scatter(pr_2.index, pr_2, label = na_2, color = 'r', linestyle = '-')
-    ax.plot(pr_1.index, pr_1, label = na_1, color = 'b',linewidth = 2.0)
-    ax.scatter(pr_2.index, pr_2, s = 50, label = na_2, color = 'r')
-    ax.set_title(na_3, color = 'black', fontsize = 16)
-    #ax2.text('2016-10-10', 20.0, 'II', fontsize = 20, color= 'c')
-    ax.set_ylabel(na_4, color = 'black', fontsize = 16)
-    ax.legend(loc = l_p, frameon=False)
-    ax.get_yticks()
-    ax.set_yticks(np.arange(pr_3, pr_4, pr_5))
-    ax.get_xticks()
-    ax.tick_params(axis='y', which ='major',bottom = True, top = False, left = True, right = True, labelleft ='on', labelright = 'on')
-    ax.tick_params(axis='y', which ='minor',bottom = True, top = False, left = True, right = True, labelleft ='on', labelright = 'on')
-    xax = ax.xaxis
-    yax = ax.yaxis
-    ax.set_xticks(pd.date_range('2011-09-01', '2012-04-30', freq = '1M'))
-    #ax.set_xlim(time_step_1, time_step_2)
-    xftm = mdates.DateFormatter('%Y-%m')
-    ax.xaxis.set_major_formatter(xftm)
-    ax.xaxis.set_minor_locator(days)
-    for label in ax.xaxis.get_ticklabels():
-        label.set_color('black')
-        label.set_rotation(15)
-        label.set_fontsize(16)
-    for label in ax.yaxis.get_ticklabels():
-        label.set_color('black')
-        label.set_fontsize(16)
-    yax.set_minor_locator(pr_6)
-    yax.set_minor_formatter(NullFormatter())
-    xax.grid(True, which = 'minor', color = 'grey', linestyle = 'dashed', alpha = 0.2)
-    yax.grid(True, which = 'minor', color = 'grey', linestyle = 'dashed', alpha = 0.2) 
-    ax.grid(True, which ='major', color = 'k', linestyle = 'solid', alpha = 0.5)
-"""
-#meteo_file = 'stations_ivan.csv'
-fileName_2 = 'field.csv'
-iPath_2 = 'D:/Churyulin/msu_cosmo/Moscow_data/Comparison/result_filter/{}'.format(fileName_2)
-
-result_exit = 'D:/Churyulin/msu_cosmo/Moscow_data/Comparison/in-situ/'
-
-# Считываем базовые данные для работы с массивом метеорологических данных (снег)
-df = pd.read_csv(iPath_2, sep = ';')
-df = df.drop_duplicates()
-df = df.set_index(['id_st'])
-
-
-df_real = pd.read_csv(iPath_2, skiprows = 0, sep=';', dayfirst = True, parse_dates = True, index_col = [0],
-                      skipinitialspace = True, na_values= ['9990','********'])
-
-stations = df_real.iloc[:,0]
-stations = stations.sort_values()
-stations = stations.drop_duplicates()
-for i in stations:
-    id_station = i
-    df_station = df.filter(like = str(id_station), axis = 0)
-    df_station = df_station.reset_index()
+# Paths settings:
+main = 'D:/Churyulin/msu_cosmo/Moscow_data/Comparison'  # Common path for snow data:
+if lprep_data is True:
+    # Snow database (preprocessing step):
+    #ds_snow = 'stations_ivan'
+    ds_snow = 'field'
     
-    id_st = df_station.iloc[:,0]
-    date = df_station.iloc[:,1]
-    date = pd.to_datetime(date)
+    # Input and output paths:
+    pin  = main + f'/result_filter/{ds_snow}.csv'
+    pout = main + '/in-situ'   
+else:
+    # Station ID. Data was prepared on the preprocessing step:
+    ds_snow = '27417'
+    # Input and output paths:
+    pin_model = main + f'/data_snowe/{ds_snow}.csv'
+    pin_situ  = main + f'/in-situ/{ds_snow}.csv'
+    pout      = main   
+
+# Settings for time filter:
+if lprep_gif is not True:
+    #  Select winter data:
+    ref_date1 = '2006-09-01'
+    ref_date2 = '2007-04-30'
+    n_periods = 12
+    years2add = 1
+else:
+    # Select data for GIF plot (snow in dynamics) - one year:
+    n_periods = 46
+    ref_date  = '2011-09-01'
+    days2add  = 5
     
-    route = df_station.iloc[:,2]
-    sd = df_station.iloc[:,3]
-    rho = df_station.iloc[:,4]
-    swe = df_station.iloc[:,5]
-            
-    date.index = id_st.index = route.index = sd.index = rho.index = swe.index
-    data_result = pd.concat([date, id_st, route, sd, rho, swe], axis = 1)
-    #print ('Columns:', data_result_1.columns)
-    data_result.columns = ['date','id_st','route','sd','rho','swe']
-    data_result = data_result.set_index(['date'])
-            
-    data_result.to_csv(result_exit + str(i) +'.csv', sep=';', float_format='%.3f', index_label = 'date')
-"""
-fileName_station = '27417.csv'
-iPath_snowe = 'D:/Churyulin/msu_cosmo/Moscow_data/Comparison/data_snowe/{}'.format(fileName_station)
-
-iPath_in_situ = 'D:/Churyulin/msu_cosmo/Moscow_data/Comparison/in-situ/{}'.format(fileName_station)
-
-
-iPath_3 = 'D:/Churyulin/msu_cosmo/Moscow_data/Comparison/'
-
-df_snowe = pd.read_csv(iPath_snowe, skiprows = 0, sep=';', dayfirst = True, parse_dates = True, index_col = [0],
-                       skipinitialspace = True, na_values= ['9990','********'])
-
-
-df_27417 = pd.read_csv(iPath_in_situ, skiprows = 0, sep=';', dayfirst = True, parse_dates = True, index_col = [0],
-                       skipinitialspace = True, na_values= ['9990','********'])
-
-ts_sd_1_table = df_snowe['depth'] #Фактические сведения
-ts_sd_2_table = df_27417['sd'] #модельные сведения
-#ts_sd_1_table = ts_sd_1_table.drop_duplicates(keep = False)
-#ts_sd_2_table = ts_sd_2_table.drop_duplicates()
-df_sd = pd.concat([ts_sd_1_table, ts_sd_2_table], axis = 1, join='inner')
-df_sd.to_csv(iPath_3 +'sd_' + fileName_station[0:5] +'.csv', sep=';', float_format='%.3f',
-             header = ['in situ','model'], index_label = 'Index')
-
-
-ts_rho_1_table = df_snowe['rho'] #Фактические сведения
-ts_rho_2_table = df_27417['rho'] #модельные сведения   
-df_rho = pd.concat([ts_rho_1_table/1000, ts_rho_2_table], axis = 1, join='inner')   
-df_rho.to_csv(iPath_3 + 'rho_' + fileName_station[0:5] +'.csv', sep=';', float_format='%.3f',
-              header = ['in situ','model'], index_label = 'Index')
-
-ts_swe_1_table = df_snowe['swe'] #Фактические сведения
-ts_swe_2_table = df_27417['swe'] #модельные сведения
-df_swe = pd.concat([ts_swe_1_table, ts_swe_2_table], axis = 1, join='inner')  
-df_swe.to_csv(iPath_3 + 'swe_' + fileName_station[0:5] +'.csv', sep=';', float_format='%.3f',
-              header = ['in situ','model'], index_label = 'Index') 
-
-#Работа с формой для комплексного графика
-rcParams['figure.subplot.left'] = 0.1  # Левая граница
-rcParams['figure.subplot.right']= 0.95  # Правая граница
-rcParams['figure.subplot.bottom']= 0.1  # Нижняя граница
-rcParams['figure.subplot.top'] = 0.95  # Верхняя граница
-rcParams['figure.subplot.hspace'] = 0.4  # Общая высота, выделенная для свободного пространства между subplots
-
-#Для станции 27515 нету данных за 2006 и 2007 год
-#Для станции 27627 нету данных за 2006 - 2008 год
-#w = 12 
-""" 
-w = 12
-periods_winter = [['2006-09-01','2007-04-30'],
-                  ['2007-09-01','2008-04-30'],
-                  ['2008-09-01','2009-04-30'],
-                  ['2009-09-01','2010-04-30'],
-                  ['2010-09-01','2011-04-30'],
-                  ['2011-09-01','2012-04-30'],
-                  ['2012-09-01','2013-04-30'],
-                  ['2013-09-01','2014-04-30'],
-                  ['2014-09-01','2015-04-30'],
-                  ['2015-09-01','2016-04-30'],
-                  ['2016-09-01','2017-04-30'],
-                  ['2017-09-01','2018-04-30']]
-"""
-w = 46
-periods_winter = [['2011-09-01','2011-09-10'],
-                  ['2011-09-01','2011-09-15'],
-                  ['2011-09-01','2011-09-20'],
-                  ['2011-09-01','2011-09-25'],
-                  ['2011-09-01','2011-09-30'],
-                  ['2011-09-01','2011-10-05'],
-                  ['2011-09-01','2011-10-10'],
-                  ['2011-09-01','2011-10-15'],
-                  ['2011-09-01','2011-10-20'],
-                  ['2011-09-01','2011-10-25'],
-                  ['2011-09-01','2011-10-30'],
-                  ['2011-09-01','2011-11-05'],
-                  ['2011-09-01','2011-11-10'],
-                  ['2011-09-01','2011-11-15'],
-                  ['2011-09-01','2011-11-20'],
-                  ['2011-09-01','2011-11-25'],
-                  ['2011-09-01','2011-11-30'],
-                  ['2011-09-01','2011-12-05'],
-                  ['2011-09-01','2011-12-10'],
-                  ['2011-09-01','2011-12-15'],
-                  ['2011-09-01','2011-12-20'],
-                  ['2011-09-01','2011-12-25'],
-                  ['2011-09-01','2011-12-30'],
-                  ['2011-09-01','2012-01-05'],
-                  ['2011-09-01','2012-01-10'],
-                  ['2011-09-01','2012-01-15'],
-                  ['2011-09-01','2012-01-20'],
-                  ['2011-09-01','2012-01-25'],
-                  ['2011-09-01','2012-01-30'],
-                  ['2011-09-01','2012-02-05'],
-                  ['2011-09-01','2012-02-10'],
-                  ['2011-09-01','2012-02-15'],
-                  ['2011-09-01','2012-02-20'],
-                  ['2011-09-01','2012-02-25'],
-                  ['2011-09-01','2012-03-05'],
-                  ['2011-09-01','2012-03-10'],
-                  ['2011-09-01','2012-03-15'],
-                  ['2011-09-01','2012-03-20'],
-                  ['2011-09-01','2012-03-25'],
-                  ['2011-09-01','2012-03-30'],
-                  ['2011-09-01','2012-04-05'],
-                  ['2011-09-01','2012-04-10'],
-                  ['2011-09-01','2012-04-15'],
-                  ['2011-09-01','2012-04-20'],
-                  ['2011-09-01','2012-04-25'],
-                  ['2011-09-01','2012-04-30'],]
-                                  
+# Settings for plots:
+lst4plot_settings = {
+    # Common settings for plots: 
+    'mode'       : 'mixed',                       # Plot type ('line', 'scatter' 'mixed')
+    'label'      : ['Model', 'in-situ'],          # Legend labels
+    'color'      : ['blue' , 'black'  ],          # line colors
+    'lstyle'     : [  '-'  ,   '-'    ],          # line style   (if 'mode' = 'scatter' -> not active)
+    'wstyle'     : [ 1.0   ,   1.0    ],          # line wight   (if 'mode' = 'scatter' -> not active)
+    'mstyle'     : [  '^'  ,   'o'    ],          # marker style (if 'mode' = 'line'    -> not active)
+    'msize'      : [ 50.0  ,  50.0    ],          # marker size  (if 'mode' = 'line'    -> not active)
+    'l_location' : 'upper left',                  # legend location
+    'x_label'    : 'X axis label was turned off', # x axis label (common for all. Was turned off)
+    'xformat'    : ['time', '%Y-%m'],             # format of axis by x axis (time or values)
+                                                  # available options:'%H', '%Y-%m-%d', '%Y' '%B' '%d-%m' %m-%d
+    # ! xmin and xmax will be define later  !
+    'xlimits'    : ['', '', '1M'],                # xmin, xmax, xstep values or time                                              
+    'rotation'   : 0.0,                           # rotation of numbers by X axis (deg)
+    'fsize'      : 14.0,                          # size of numbers for X and Y axes
+    # Settings for snow depth plot:     
+    'sd_plot' : {
+        'plt_label'  : 'Snow depth',              # plot title,
+        'y_label'    : 'Snow depth, s m-1',       # y axis label
+        'ylimits'    : [0.0, 61.1, 15],           # ymin, ymax, ystep values or time
+    },
+    # Settings for snow density plot:
+    'rho_plot' : {
+        'plt_label'  : 'Snow density',
+        'y_label'    : 'Snow density, g sm-3',
+        'ylimits'    : [0.0, 1.01, 0.25],
+    },
+    # Settings for snow density plot:
+    'swe_plot' : {
+        # Settings for labels:
+        'plt_label'  : 'Snow water equivalent',
+        'y_label'    : 'Snow water equivalent, mm',
+        'ylimits'    : [0.0, 151.1, 15.0],
+    },  
+} 
+    
+kg2g = 1000.0 # convert kg to gramm
+#=============================    Main program   ==============================
+if __name__ == '__main__': 
+    # Data preprocessing. Select data for stations from and save the as 
+    # separete .csv files:
+    if lprep_data is  True:
+        print ('Start data preprocessing:')
+        # Get data from common snow dataset:
+        df = (
+            pd.read_csv(pin, sep = ';')
+              .drop_duplicates()
+              .set_index(['id_st'])
+        )
+        # Get stations ID from common snow dataset:
+        stations = (
+            get_data(pin)
+                .iloc[:,0]
+                .sort_values()
+                .drop_duplicates()
+        )
+        # Select data by stations id and save data to the new csv files: 
+        for st_index in stations:   
+            # -- Select data for station:
+            df_station = (
+                df.filter(like = str(st_index), axis = 0)
+                  .reset_index()
+            )
+            #-- Merge data:
+            data_result = pd.concat(
+                [pd.to_datetime(df_station.iloc[:,1]),
+                 df_station.iloc[:,0], 
+                 df_station.iloc[:,2], 
+                 df_station.iloc[:,3],
+                 df_station.iloc[:,4],
+                 df_station.iloc[:,5],
+                ], axis = 1
+            )
+            #-- Rename columns and set index:
+            data_result.columns = ['date','id_st','route','sd','rho','swe']
+            data_result = data_result.set_index(['date'])
+            #-- Save files:
+            data_result.to_csv(
+                f'{pout}/{st_index}.csv', sep=';', float_format='%.3f', 
+                index_label = 'date'
+            )
+    else:
+        print('Data had been prepared early')
         
-periods_winter = np.array(periods_winter)
-#print (periods_winter)
-for tr in range(w):
-    y_w_1 = periods_winter[tr][0]
-    print (y_w_1)
-    y_w_2 = periods_winter[tr][1]
-    print (y_w_2)
-    ts_sd_1 = df_snowe['depth'][y_w_1:y_w_2] #Фактические сведения
-    ts_sd_2 = df_27417['sd'][y_w_1:y_w_2] #модельные сведения
-      
-    ts_rho_1 = df_snowe['rho'][y_w_1:y_w_2] #Фактические сведения
-    ts_rho_2 = df_27417['rho'][y_w_1:y_w_2] #модельные сведения
-    
-    ts_swe_1 = df_snowe['swe'][y_w_1:y_w_2] #Фактические сведения
-    ts_swe_2 = df_27417['swe'][y_w_1:y_w_2] #модельные сведения
-
-    fig = plt.figure(figsize = (14,10))
-    #Задание координатной сетки и места где будут располагаться графики
-    egrid = (3,4)
-    ax1 = plt.subplot2grid(egrid, (0,0), colspan = 4)
-    ax2 = plt.subplot2grid(egrid, (1,0), colspan = 4)
-    ax3 = plt.subplot2grid(egrid, (2,0), colspan = 4)
-    # График для температуры поверхности почвы: tming - минимальная температура поверхности почвы (град С)
-    #t_g - температура поверхности почвы (град С)       
-    na_1 = u'Model'
-    na_2 = u'in-situ'
-    na_3 = u'Snow depth'
-    na_4 = u'Snow depth, sm'
-    l_p = 'upper left'
-    #snow_sd = plot_2(ax1, ts_sd_1, ts_sd_2, na_1, na_2, na_3, na_4, 0, 61, 15, minorLocator_1, l_p, y_w_1, y_w_2)
-    snow_sd = plot_2(ax1, ts_sd_1, ts_sd_2, na_1, na_2, na_3, na_4, 0, 61, 15, minorLocator_1, l_p)
-    
-    # График для температуры поверхности почвы: tming - минимальная температура поверхности почвы (град С)
-    #t_g - температура поверхности почвы (град С)       
-    na_1 = 'Model'
-    na_2 = 'in-situ'
-    na_3 = u'Snow density'
-    na_4 = u'Snow density, g/sm3'
-    l_p = 'upper left'
-    #snow_rho = plot_2(ax2, ts_rho_1/1000, ts_rho_2, na_1, na_2, na_3, na_4, 0, 1, 0.25, minorLocator_2, l_p, y_w_1, y_w_2)
-    snow_rho = plot_2(ax2, ts_rho_1/1000, ts_rho_2, na_1, na_2, na_3, na_4, 0, 1, 0.25, minorLocator_2, l_p)  
-    # График для температуры поверхности почвы: tming - минимальная температура поверхности почвы (град С)
-    #t_g - температура поверхности почвы (град С)       
-    na_1 = u'Model'
-    na_2 = u'in-situ'
-    na_3 = u'Snow water equivalent'
-    na_4 = u'Snow water equivalent, mm'
-    l_p = 'upper left'
-    #snow_swe = plot_2(ax3, ts_swe_1, ts_swe_2, na_1, na_2, na_3, na_4, 0, 151, 15, minorLocator_3, l_p, y_w_1, y_w_2)
-    snow_swe = plot_2(ax3, ts_swe_1, ts_swe_2, na_1, na_2, na_3, na_4, 0, 151, 15, minorLocator_3, l_p)
-    plt.savefig(iPath_3 + 'plot_' + fileName_station[0:5] +' time_{}_{}.png'.format(y_w_1,y_w_2), format='png', dpi = 300) 
-    plt.gcf().clear()
-
-"""
-    fig = plt.figure(figsize = (14,10))
-    #Задание координатной сетки и места где будут располагаться графики
-    egrid = (3,4)
-    ax1 = plt.subplot2grid(egrid, (0,0), colspan = 4)
-    ax2 = plt.subplot2grid(egrid, (1,0), colspan = 4)
-    ax3 = plt.subplot2grid(egrid, (2,0), colspan = 4)
-    
-
-    ax1.plot(ts_sd_1.index, ts_sd_1, color = 'blue', linestyle = '-')
-    ax1.scatter(ts_sd_2.index, ts_sd_2, color = 'red')
-    
-    ax2.plot(ts_swe_1.index, ts_swe_1, color = 'green', linestyle = '-')
-    ax2.scatter(ts_swe_2.index, ts_swe_2, color = 'red')
-    
-    ax3.plot(ts_rho_1.index, ts_rho_1, color = 'black', linestyle = '-')
-    ax3.scatter(ts_rho_2.index, ts_rho_2*1000, color = 'green')
-    
-    #ax4.plot(data_result.index, data_result['PRESS'], color = 'blue', linestyle = '-')
-
-    #plt.savefig(iPath_3 + 'plot_1' +'.png', format='png', dpi = 300)
-    plt.savefig(iPath_3 + 'plot_' + fileName_station[0:5] +' time_{}_{}.png'.format(y_w_1,y_w_2), format='png', dpi = 300) 
-    plt.gcf().clear()
-"""
-    
+    # Main data processing part
+    if lmain_mode is True:
+        print('Main calculations:')    
+        # -- Get model and in-situ data: 
+        df_snowe = get_data(pin_model)
+        df_situ  = get_data(pin_situ)
+        
+        # -- Create csv merge tables for the research parameters:
+        #    p.s.: no data for in-situ stations (27515 - 2006, 2007 years
+        #                                        27627 - 2006, 2008 years)
+        create_table(df_snowe, df_situ, ['depth', 'sd' , 'sd_' ], pout, ds_snow)
+        create_table(df_snowe, df_situ, ['rho'  , 'rho', 'rho_'], pout, ds_snow)
+        create_table(df_snowe, df_situ, ['swe'  , 'swe', 'swe_'], pout, ds_snow)
+        
+        # -- Create time filter:
+        if lprep_gif is not True:
+            print('Creating winter time filter for the research data')
+            #-- Reference time steps (start first year, end first year )
+            refer_step1 = datetime.strptime(ref_date1, '%Y-%m-%d')
+            refer_step2 = datetime.strptime(ref_date2, '%Y-%m-%d')
+            #-- Actual time step (will change)
+            act_step1 = refer_step1
+            act_step2 = refer_step2
+            #-- Create time list:
+            periods = []
+            for i in range(n_periods):
+                if i == 0:
+                    periods.append([refer_step1, refer_step2])
+                else:
+                    act_step1 = act_step1 + relativedelta(years = years2add)
+                    act_step2 = act_step2 + relativedelta(years = years2add)
+                    periods.append([act_step1, act_step2])
+        else:
+            print('Creating gif time filter for the research data')
+            #-- Reference time step (constant on every step)
+            refer_step = datetime.strptime(ref_date, '%Y-%m-%d')
+            #-- Actual time step (will change)
+            act_step   = refer_step
+            #-- Create time list:
+            periods = []
+            for i in range(n_periods):
+                act_step = act_step + timedelta(days = days2add)
+                periods.append([refer_step, act_step])
+        
+        #-- Select data in actual time range
+        for i in range(n_periods):
+            # -- Select time range (t1 - start; t2 - stop)
+            t1 = periods[i][0]
+            t2 = periods[i][1]
+            
+            # -- Define time settings for x axis
+            if lprep_gif is not True:
+                lst4plot_settings.get('xlimits')[0] = t1 # xmin
+                lst4plot_settings.get('xlimits')[1] = t2 # xmax
+            else:
+                lst4plot_settings.get('xlimits')[0] = periods[0][0]  # xmin
+                lst4plot_settings.get('xlimits')[1] = periods[-1][1] # xmax            
+       
+            # -- Create plots:
+            fig = plt.figure(figsize = (14,10))
+            # -- Settings for plot with subplots
+            # -- left, right, bottom, top borders hspace between subplots
+            rcParams['figure.subplot.left']   = 0.1
+            rcParams['figure.subplot.right']  = 0.95
+            rcParams['figure.subplot.bottom'] = 0.1
+            rcParams['figure.subplot.top']    = 0.95
+            rcParams['figure.subplot.hspace'] = 0.4
+               
+            # -- Setting the coordinate grid and the place where the graphs will be located
+            egrid = (3,4)
+            ax1 = plt.subplot2grid(egrid, (0,0), colspan = 4)
+            ax2 = plt.subplot2grid(egrid, (1,0), colspan = 4)
+            ax3 = plt.subplot2grid(egrid, (2,0), colspan = 4)
+            
+            # -- Create plots (SD, RHO, SWE):
+            l4v.create_plot(
+                ax1,
+                #           model                in-situ 
+                [df_snowe['depth'][t1:t2], df_situ['sd'][t1:t2]], 
+                lst4plot_settings, 
+                'sd_plot' )
+            
+            l4v.create_plot(
+                ax2,
+                #             model                  in-situ
+                [df_snowe['rho'][t1:t2] / kg2g, df_situ['rho'][t1:t2]],
+                lst4plot_settings,
+                'rho_plot'
+            )
+            
+            l4v.create_plot(
+                ax3,
+                #           model                in-situ
+                [df_snowe['swe'][t1:t2], df_situ['swe'][t1:t2]],
+                lst4plot_settings,
+                'swe_plot',
+            )
+              
+            # -- Save plot:
+            t1_out = str(t1)[0:11]
+            t2_out = str(t2)[0:11]
+            
+            output_plot = f'{pout}/plot_{ds_snow[0:5]}_{t1_out}_{t2_out}.png'
+            plt.savefig(output_plot, format = 'png', dpi = 300) 
+            plt.gcf().clear()
+#=============================    End of program   ============================ 
+ 
