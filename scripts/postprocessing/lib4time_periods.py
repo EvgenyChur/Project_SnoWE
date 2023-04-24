@@ -95,5 +95,6 @@ def fixed_timestep():
         #'2019-02-10','2019-02-20','2019-02-28','2019-03-10','2019-03-20','2019-03-31',
         #'2019-04-10','2019-04-20','2019-04-30','2019-05-10','2019-05-20','2019-05-31']
 
-        dtime = pd.to_datetime(time_step, format = '%Y-%m-%d')
+    dtime = pd.to_datetime(time_step, format = '%Y-%m-%d')
+
     return dtime
