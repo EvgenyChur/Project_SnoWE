@@ -20,21 +20,14 @@ Version    Date       Name
 #=============================     Import modules     ======================
 import pandas as pd
 import matplotlib.pyplot as plt
-
-from datetime import datetime, timedelta
-from dateutil.relativedelta import relativedelta
 from matplotlib import rcParams
 
 # Personal modules:
 import lib4visualization as l4v
-#=============================   Personal functions   ======================
-def get_data(ipath:str):
-    # Read csv files
-    return pd.read_csv(
-        ipath, skiprows = 0, sep = ';', dayfirst = True, parse_dates = True, 
-        index_col = [0], skipinitialspace = True, na_values = ['9990','********'],
-    )
+import lib4time_periods as l4tp
+import lib4processing as l4p
 
+#=============================   Personal functions   ======================
 def create_table(df_model, df_fact, params:list, pout:str, fn_station:str):
     # local variables:
     merge_method = 'inner'
@@ -92,7 +85,7 @@ else:
 # Settings for plots:
 lst4plot_settings = {
     # Common settings for plots: 
-    'mode'       : 'mixed',                       # Plot type ('line', 'scatter' 'mixed')
+    'mode'       : ['line' , 'scatter'],          # Plot type ('line', 'scatter')
     'label'      : ['Model', 'in-situ'],          # Legend labels
     'color'      : ['blue' , 'black'  ],          # line colors
     'lstyle'     : [  '-'  ,   '-'    ],          # line style   (if 'mode' = 'scatter' -> not active)
@@ -110,7 +103,7 @@ lst4plot_settings = {
     # Settings for snow depth plot:     
     'sd_plot' : {
         'plt_label'  : 'Snow depth',              # plot title,
-        'y_label'    : 'Snow depth, s m-1',       # y axis label
+        'y_label'    : 'Snow depth, sm',          # y axis label
         'ylimits'    : [0.0, 61.1, 15],           # ymin, ymax, ystep values or time
     },
     # Settings for snow density plot:
@@ -137,16 +130,16 @@ if __name__ == '__main__':
         print ('Start data preprocessing:')
         # Get data from common snow dataset:
         df = (
-            pd.read_csv(pin, sep = ';')
-              .drop_duplicates()
-              .set_index(['id_st'])
+            l4p.get_csv_data(pin)
+               .drop_duplicates()
+               .set_index(['id_st'])
         )
         # Get stations ID from common snow dataset:
         stations = (
-            get_data(pin)
-                .iloc[:,0]
-                .sort_values()
-                .drop_duplicates()
+            l4p.get_csv_data(pin)
+               .iloc[:,0]
+               .sort_values()
+               .drop_duplicates()
         )
         # Select data by stations id and save data to the new csv files: 
         for st_index in stations:   
@@ -180,8 +173,8 @@ if __name__ == '__main__':
     if lmain_mode is True:
         print('Main calculations:')    
         # -- Get model and in-situ data: 
-        df_snowe = get_data(pin_model)
-        df_situ  = get_data(pin_situ)
+        df_snowe = l4p.get_csv_data(pin_model)
+        df_situ  = l4p.get_csv_data(pin_situ)
         
         # -- Create csv merge tables for the research parameters:
         #    p.s.: no data for in-situ stations (27515 - 2006, 2007 years
@@ -192,34 +185,10 @@ if __name__ == '__main__':
         
         # -- Create time filter:
         if lprep_gif is not True:
-            print('Creating winter time filter for the research data')
-            #-- Reference time steps (start first year, end first year )
-            refer_step1 = datetime.strptime(ref_date1, '%Y-%m-%d')
-            refer_step2 = datetime.strptime(ref_date2, '%Y-%m-%d')
-            #-- Actual time step (will change)
-            act_step1 = refer_step1
-            act_step2 = refer_step2
-            #-- Create time list:
-            periods = []
-            for i in range(n_periods):
-                if i == 0:
-                    periods.append([refer_step1, refer_step2])
-                else:
-                    act_step1 = act_step1 + relativedelta(years = years2add)
-                    act_step2 = act_step2 + relativedelta(years = years2add)
-                    periods.append([act_step1, act_step2])
+            periods = l4tp.get_time_periods(ref_date1, ref_date2, n_periods, years2add)
         else:
-            print('Creating gif time filter for the research data')
-            #-- Reference time step (constant on every step)
-            refer_step = datetime.strptime(ref_date, '%Y-%m-%d')
-            #-- Actual time step (will change)
-            act_step   = refer_step
-            #-- Create time list:
-            periods = []
-            for i in range(n_periods):
-                act_step = act_step + timedelta(days = days2add)
-                periods.append([refer_step, act_step])
-        
+            periods = l4tp.get_time_periods4gif(ref_date, n_periods, days2add)
+
         #-- Select data in actual time range
         for i in range(n_periods):
             # -- Select time range (t1 - start; t2 - stop)
