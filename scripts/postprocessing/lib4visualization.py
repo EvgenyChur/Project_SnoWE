@@ -15,14 +15,12 @@ Version    Date       Name
            Initial release
 """
 
-import os
 import sys
+import numpy as np
+import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
-from matplotlib import rcParams
 from matplotlib.ticker import FormatStrFormatter, AutoMinorLocator, NullFormatter
-
-
 
 # Additional parameters for X and Y axis for plots
 #------------------------------------------------------------------------------
@@ -172,16 +170,16 @@ def plot_settings(
     #-- Get x ticks parameters
     if xformat == 'time':
         ax.set_xticks(pd.date_range(xmin, xmax, freq = xstep))
-        ax.xaxis.set_major_formatter(mdates.DateFormatter(major_xaxis_labels))
+        ax.xaxis.set_major_formatter(mdates.DateFormatter(mj_xticks))
         # If you want to add additional ticks for x axis - use below code line
-        #ax.xaxis.set_minor_locator(minor_xaxis_labels)
+        #ax.xaxis.set_minor_locator(mi_xticks)
     elif xformat == 'values':
         ax.set_xticks(np.arange(xmin, xmax, xstep))
 
     #-- Get y ticks parameters
     ax.set_yticks(np.arange(ymin, ymax, ystep))
 
-    if lsecond_axis == True:
+    if lsecond_yaxis == True:
         ax.tick_params(
             axis = 'y' , which ='major', bottom = True  , top = False,
             left = True, right = True  , labelleft ='on', labelright = 'on'
@@ -191,12 +189,12 @@ def plot_settings(
             left = True, right = True  , labelleft ='on', labelright = 'on'
         )
     #-- Additional ticks settings
-    yax.set_minor_locator(minorLocator)
-    yax.set_minor_formatter(NullFormatter())
+    ax.yaxis.set_minor_locator(minorLocator)
+    ax.yaxis.set_minor_formatter(NullFormatter())
     #-- Parameters for ticks:
     tick_rotation_size(ax, rotation, fsize)
     #-- Grid settings
-    ax.grid(True, which='major', color=gclr, linestyle=gr_style, alpha=gr_tran)
+    ax.grid(True, which='major', color=gr_clr, linestyle=gr_style, alpha=gr_tran)
     #return ax
 # Function plot_settings --> END
 
@@ -228,7 +226,7 @@ def tick_rotation_size(ax, rotation:int, fsize:int):
     #return ax
 # Function tick_rotation_size  --> END
 
-def create_plot(ax, lst4data:list, set4plots:dict, plot_type:str):
+def create_plot(ax, lst4data:list, set4plots:dict, plot_type:str, nlines = None):
     '''
     # Task: Create plot for research parameter depending on data types
 
@@ -238,37 +236,37 @@ def create_plot(ax, lst4data:list, set4plots:dict, plot_type:str):
     lst4data :  Time series for the research parameters
     set4plots : Plot settings
     plot_type : Plot type (SD, RHO, SWE)
-
+    nlines : Numbers of plot lines
     Returns
     -------
         Figure
     '''
-    #-- Create scatter plot for data from lst4data with indexes (lst4scatter_index)
-    lst4scatter_index = 1 # in_situ_vs_snowe (in-sity data comes as scatter plot)
-
     # -- User settings
-    mode     = set4plots.get('mode')   # plot type
-    labels   = set4plots.get('label')  # Legend labels
-    colors   = set4plots.get('color')  # line color
-    ln_style = set4plots.get('lstyle') # line style
-    ln_width = set4plots.get('wstyle') # line wight
-    mr_style = set4plots.get('mstyle') # marker style
-    mr_size  = set4plots.get('msize')  # marker size
+    if nlines != None:
+        mode     = set4plots.get(nlines).get('mode')   # plot type
+        labels   = set4plots.get(nlines).get('label')  # Legend labels
+        colors   = set4plots.get(nlines).get('color')  # line color
+        ln_style = set4plots.get(nlines).get('lstyle') # line style
+        ln_width = set4plots.get(nlines).get('wstyle') # line wight
+        mr_style = set4plots.get(nlines).get('mstyle') # marker style
+        mr_size  = set4plots.get(nlines).get('msize')  # marker size
+
+    else:
+        mode     = set4plots.get('mode')   # plot type
+        labels   = set4plots.get('label')  # Legend labels
+        colors   = set4plots.get('color')  # line color
+        ln_style = set4plots.get('lstyle') # line style
+        ln_width = set4plots.get('wstyle') # line wight
+        mr_style = set4plots.get('mstyle') # marker style
+        mr_size  = set4plots.get('msize')  # marker size
 
     #-- Create plots based on data:
     for i in range(len(lst4data)):
-        if mode == 'line':
+        if mode[i] == 'line':
             plt_line(
                     ax, lst4data[i], labels[i], colors[i], ln_style[i], ln_width[i])
-        elif mode = 'scatter':
+        elif mode[i] == 'scatter':
             plt_scatter(
-                    ax, lst4data[i], labels[i], colors[i], mr_size    , mr_style[i])
-        elif mode == 'mixed':
-            if i not in lst4scatter_index:
-                plt_line(
-                    ax, lst4data[i], labels[i], colors[i], ln_style[i], ln_width[i])
-            else
-                plt_scatter(
                     ax, lst4data[i], labels[i], colors[i], mr_size    , mr_style[i])
         else:
             sys.exit('Error: Figure mode has inappropriate type.')
