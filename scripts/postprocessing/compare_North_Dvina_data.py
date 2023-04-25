@@ -451,9 +451,9 @@ if lmain_calc is True:
                 fig = plt.figure(figsize = (14,10))
                 ax = fig.add_subplot(111)
                 try:
-                    l4v.create_plot(ax, winter_data4station, set4plots, plot_type, 'swe_plot', 'plot7')
-                    #l4v.create_plot(ax, winter_data4station, set4plots, plot_type, 'swe_plot', 'plot6')
-                    #l4v.create_plot(ax, winter_data4station, set4plots, plot_type, 'swe_plot', 'plot5')
+                    l4v.create_plot(ax, winter_data4station, set4plots, 'swe_plot', 'plot7')
+                    #l4v.create_plot(ax, winter_data4station, set4plots, 'swe_plot', 'plot6')
+                    #l4v.create_plot(ax, winter_data4station, set4plots, 'swe_plot', 'plot5')
                     plt.savefig(
                         f'{pout_plot}/plot_swe_{t1_out}_{t2_out}.png',
                             format = 'png', dpi = 300                ) 
@@ -465,7 +465,7 @@ if lmain_calc is True:
                 fig = plt.figure(figsize = (14,10))
                 bx = fig.add_subplot(111)
                 try:
-                    l4v.create_plot(ax1, [snowe_sd, in_situ_sd, field_sd, forest_sd,], set4plots, plot_type, script)
+                    l4v.create_plot(ax1, [snowe_sd, in_situ_sd, field_sd, forest_sd,], set4plots, 'sd_plot', script)
                     # -- Save plot:
                     plt.savefig(
                         f'{pout_plot}/plot_sd_{t1_out}_{t2_out}.png',
