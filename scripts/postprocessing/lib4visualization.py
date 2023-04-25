@@ -93,6 +93,24 @@ def plt_scatter(ax, data, label:str, color:str, msize:str, mstyle:str):
     #return ax
 # Function plt_scatter --> END
 
+def plt_bar(ax, data, label:str, color:str):
+    '''
+    Task: Create bar plot
+
+    Parameters
+    ----------
+    ax : Subplot
+    data : Series
+    label : Legend for parameter
+    color : Color for parameter
+
+    Returns
+    -------
+    ax : Subplot
+    '''
+    ax.plot(data.index, data, label = label, color = color)
+    #return ax
+
 # Function plot_settings --> START
 def plot_settings(
     ax, set4plots:dict, plot_type:str, lplt_title = True, lx_label = False, ly_label = True,
@@ -268,6 +286,8 @@ def create_plot(ax, lst4data:list, set4plots:dict, plot_type:str, nlines = None)
         elif mode[i] == 'scatter':
             plt_scatter(
                     ax, lst4data[i], labels[i], colors[i], mr_size    , mr_style[i])
+        elif mode[i] == 'bar':
+            plt_bar(ax, lst4data[i], labels[i], colors[i])
         else:
             sys.exit('Error: Figure mode has inappropriate type.')
 
@@ -276,7 +296,71 @@ def create_plot(ax, lst4data:list, set4plots:dict, plot_type:str, nlines = None)
 
 
 
+#------------------------------------------------------------------------------
+# Subroutine: plot_ml_2
+#------------------------------------------------------------------------------
+#
+# Функция для построения графиков с 2 переменными: in one plot
+#
+#
+# Input parameters:   prr_1, prr_2     - the main parameters
+#                     leg_1, leg_2     - the main labels
+#                     nam_3, nam_4     - the name of y axis
+#                     pr_2, pr_3, pr_4 - the asis y limits
+#                                        (pr_2 - low limit,
+#                                         pr_3 - upper limit,
+#                                         pr_4 - step)
+#                     pr_5, pr_6, pr_7 - the asis y limits
+#                                        (pr_5 - low limit,
+#                                         pr_6 - upper limit,
+#                                         pr_7 - step)
+#                     l_p_1            - the legend position
+#                     l_p_2            - the legend position
+#                     time_step_1      - the start date
+#                     time_step_2      - the stop date
+#
+#
+# Author: Evgenii Churiulin, Center for Environmental Systems
+#                                         Research (CESR) --- 16.03.2021
+# email: evgenychur@uni-kassel.de
+#
+#------------------------------------------------------------------------------
 
+def plot_ml_2(ax, bx, prr_1, prr_2, leg_1, leg_2,
+                      nam_3, nam_4,
+                      pr_2, pr_3, pr_4,
+                      pr_5, pr_6, pr_7,
+                      l_p_1, l_p_2,
+                      time_step_1, time_step_2):
+    # The axis y - 1
+    ax.scatter(prr_1.index, prr_1, s = 50, label = leg_1, color = 'r')
+    ax.set_ylabel(nam_3, color = 'red', fontsize = 14, labelpad = 35 )
+    ax.get_yticks()
+    ax.set_yticks(np.arange(pr_2, pr_3, pr_4))
+    ax.legend(loc = l_p_1, frameon=False)
+    ax.get_xticks()
+    xbxx = ax.xaxis
+    ax.set_xlim(time_step_1, time_step_2)
+    xftm = mdates.DateFormatter('%Y-%m')
+    ax.xaxis.set_major_formatter(xftm)
+#    ax.xaxis.set_minor_locator(days)
+    for label in ax.xaxis.get_ticklabels():
+        label.set_color('black')
+        label.set_rotation(15)
+        label.set_fontsize(12)
+    xbxx.grid(True, which = 'minor', color = 'grey', linestyle = 'dashed', alpha = 0.2)
+    ax.grid(True  , which = 'major', color = 'k'   , linestyle = 'solid' , alpha = 0.5)
+
+    # The axis y - 2
+    bx.plot(prr_2.index, prr_2, label = leg_2, color = 'blue', linestyle = '-.')
+    bx.set_ylabel(nam_4, color = 'blue', fontsize = 14)
+    bx.get_yticks()
+    bx.set_yticks(np.arange(pr_5, pr_6, pr_7))
+    bx.legend(loc = l_p_2, frameon=False)
+    bx.get_xticks()
+
+# plot_ml_2
+#------------------------------------------------------------------------------
 
 
 

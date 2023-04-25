@@ -120,3 +120,78 @@ def get_obs_data(path_in:str, path_out:str):
         df_st = df.loc[df['id_st'] == i]
         df_st.to_csv(
             path_out + str(i) +'.csv', sep = ';', float_format = '%.3f')
+
+
+# -- Section reading data from METEO.RU web-source:
+# -------------------------------------------------------------------------
+def get_meteo_ru_sd(path:str):
+    '''
+    Task: Initial preprocessing snow depth data downloaded from meteo.ru web-source
+
+    Input:
+        path: path for the initial data
+    Return:
+        df: DataFrame --> preprocessed data
+    '''
+    widths = [5, 5, 3, 3, 5, 3, 2, 2, 2]
+
+    df = pd.read_fwf(
+        path,
+        widths = widths,
+        header=None,
+        na_values = ['9999'],
+        parse_dates = {'Date':[1,2,3]},
+        index_col = 0,
+        skipinitialspace = True
+    ).drop([0, 5, 6, 7, 8], axis = 1)
+
+    df.columns = ['SD']
+    return df
+
+
+def get_meteo_ru_swe(path_swe:str):
+    '''
+    Task: Initial preprocessing snow water equivalent downloaded from meteo.ru web-source
+
+    Input:
+        path: path for the initial data
+    Return:
+        df: DataFrame --> preprocessed data
+
+    '''
+    df = pd.read_csv(
+        path_swe,
+        sep = ';',
+        header=None,
+        na_values = ['9999'],
+        parse_dates = {'Date':[1, 2, 4]},
+        index_col = 0,
+        skipinitialspace = True
+    ).drop([0, 3, 5, 6, 7, 9, 10, 12, 13, 14, 16, 17, 18], axis=1)
+
+    df.columns = ['SD', 'RHO', 'SWE']
+    return df
+
+def get_meteo_ru_t2m_prec(path:str):
+    '''
+    Task: Initial preprocessing T2m data downloaded from meteo.ru web-source
+
+    Input:
+        path: path for the initial data
+    Return:
+        df: DataFrame --> preprocessed data
+    '''
+    widths = [5, 5, 3, 3, 6, 6, 6, 6  ]
+
+    df = pd.read_fwf(
+        path_t2m,
+        widths = widths,
+        header=None,
+        na_values = ['9999'],
+        parse_dates = {'Date':[1,2,3]},
+        index_col = 0,
+        skipinitialspace = True
+    ).drop([0], axis=1)
+
+    df.columns = ['T2m_min', 'T2m_mean', 'T2m_max', 'Prec']
+    return df
