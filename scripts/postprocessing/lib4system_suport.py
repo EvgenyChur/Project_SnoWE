@@ -18,7 +18,7 @@ Version    Date       Name
 import os
 
 
-def cleah_history(pout:str):
+def clean_history(pout:str):
     '''
     Task: Очистка результатов предыдушей работы скрипта
 
