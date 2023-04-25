@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Description: Module for visualization of ICON data
+Description: Module for work with time limits
 
 Authors: Evgenii Churiulin
 
@@ -14,7 +14,6 @@ Version    Date       Name
     1.1    20.04.2023 Evgenii Churiulin, MPI-BGC
            Initial release
 """
-
 
 from datetime import datetime, timedelta
 from dateutil.relativedelta import relativedelta

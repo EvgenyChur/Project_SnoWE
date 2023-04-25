@@ -55,11 +55,10 @@ def get_statistic(
     ''' 
     # Select SnoWE, ECOMAG and field survey data
     if lfield_stations is True:
-        df_data_stat = pd.concat(df_list[0:7][t1:t2], axis = 1)
+        df_data_stat = pd.concat(df_list[0:7], axis = 1)
     # Select forest stations:
     if lforest_stations is True:
-        df_data_stat = pd.concat(
-            (df_list[0:6][t1:t2] + df_list[7:][t1:t2])[0:7], axis = 1)
+        df_data_stat = pd.concat((df_list[0:6] + df_list[7:])[0:7], axis = 1)
     
     # Rename columns
     new_columns = lst4delta + [refer]               
@@ -69,7 +68,6 @@ def get_statistic(
                 list(df_data_stat.columns.values)[i]:new_columns[i]
                 }
             )
-                                        
     # Clean NaN values (by field)
     if lfield_stations is True:
         df_data_stat = df_data_stat[np.isfinite(df_data_stat[refer])]
@@ -80,19 +78,12 @@ def get_statistic(
     # Calculation statistical parameters:
     try:
         df_statistic = l4stat.cal_stat_values(df_data_stat, lst4delta, refer)
-        #  Save as a new output .csv file
-        t1_out = str(t1)[0:11]
-        t2_out = str(t2)[0:11]
-        
-        df_statistic.to_csv(
-            f'{pout_stat}/{id_station}_{t1_out}_{t2_out}.csv',
-            sep=';', float_format = '%.3f',
-            #header = ['snowe','eco_model','eco_stat','field'],
-            #index_label = 'Date',
-            )                   
     except NameError as error:
         print ('Exception in field stations: ', error)
     
+    #  Save as a new output .csv file       
+    df_statistic.to_csv(f'{pout_stat}/{id_station}_{t1_out}_{t2_out}.csv',
+                        sep = ';', float_format = '%.3f')                   
     return df_statistic
  
 def cal_coef(df_model1, df_model2, df_model3, t2m, pout_csv):
@@ -180,12 +171,12 @@ if lprep_calc is True:
         main + '/inna_meteo_field/',                                           # с маршрутными снегомерными наблюдениями в поле - станции
         main + '/inna_meteo_forest/',                                          # с маршрутными снегомерными наблюдениями в лесу
     ]
-        
+
     # Cleaning previous results:
     for path in pout_catalog:
         l4s.cleah_history(path)
-        
-    # List of meteorological station for research (SYPON) -> 
+
+    # List of meteorological station for research (SYPON) ->
     # (change ECOMAD stations to current values)
     lst4station = [
         22563, 23608, 23701, 23709, 22671, 22676, 22557, 23704, 22559, 23803, 23707,
@@ -203,49 +194,49 @@ if lmain_calc is True:
         22563, 22656, 22671, 22762, 22778, 22798, 22867, 22974, 22768, 22981,
         22876, 23803, 22996, 23701, 23709, 23804, 23807, 23904, 27051, 27066,
         27083]
-    
+
     #-- Option 2:
     #lst4station = [
     #    22563, 22671, 22762, 22768, 22778, 22798, 22867, 22974, 22996, 23701,
     #    23709, 23803, 23804, 23807, 27051, 27066, 27083, 22876, 23904]
-    
+
     #-- Option 3 (Best scores for SNOWE):
     #lst4station = [
-    #    22563, 22762, 22768, 22798, 22867, 22974, 22996, 27051, 27083, 22876] 
+    #    22563, 22762, 22768, 22798, 22867, 22974, 22996, 27051, 27083, 22876]
     
     #-- Option 4 (Best scores for ECOMAG):
     #lst4station = [
     #    22671, 22778, 23701, 23709, 23803, 23804, 23807, 27066, 23904]
-     
+
     #-- Option 5 (full list of stations):
     #lst4station = [
-    #    22557, 22559, 22563, 22651, 22656, 22657, 22671, 22676, 22762, 22768, 
+    #    22557, 22559, 22563, 22651, 22656, 22657, 22671, 22676, 22762, 22768,
     #    22778, 22781, 22798, 22867, 22869, 22876, 22887, 22888, 22889, 22966,
     #    22974, 22981, 22983, 22988, 22996, 23608, 23701, 23704, 23707, 23709,
     #    23803, 23804, 23807, 23808, 23904, 27026, 27037, 27044, 27051, 27066,
-    #    27071, 27083]      
-    
+    #    27071, 27083]
+
     # Input info:
     pin_catalog = {}
     for id_station in sorted(lst4station):
         pin_catalog[id_station] = [
         #                  Input data paths                       Type         Данные:
-            [main + f'/inna_snowe_result/000{id_station}.txt'  , 'snowe'],     # из SnoWE                                                iPath_snowe
-            [main + f'/inna_data_ecomag/{id_station}.csv'      , 'eco'  ],     # ECOMAG счет по COSMO                                    iPath_1
-            [main + f'/inna_data_meteostation/{id_station}.csv', 'eco'  ],     # ECOMAG счет по станциям                                 iPath_2
-            [main + f'/inna_data_hybrid/{id_station}.csv'      , 'eco'  ],     # ECOMAG счет по COSMO с региональной СУД                 iPath_5 
-            [main + f'/inna_data_cosmo_koef/{id_station}.csv'  , 'eco'  ],     # ECOMAG счет по COSMO с поправочными коэффициентами      iPath_7 
-            [main + f'/inna_data_meteo_koef/{id_station}.csv'  , 'eco'  ],     # ECOMAG счет по метеостанциям с поправочным коэффиентом  iPath_6
-            [main + f'/inna_meteo_field/{id_station}.csv'      , 'obs'  ],     # с маршрутными снегомерными наблюдениями в поле          iPath_3
-            [main + f'/inna_meteo_forest/{id_station}.csv'     , 'obs'  ],     # с маршрутными снегомерными наблюдениями в лесу          iPath_4
-            [main + f'/inna_meteo_1day/{id_station}.csv'       , 'sypon'],     # из SYPON (snow depth)                                   iPath_test
-            [main + f'/inna_meteo_1day/{id_station}.csv'       , 'synop'],     # из Sypon (temperature) iPath_44 = ],
-        ]    
-    
+            [main + f'/inna_snowe_result/000{id_station}.txt'  , 'snowe'],     # из SnoWE
+            [main + f'/inna_data_ecomag/{id_station}.csv'      , 'eco'  ],     # ECOMAG счет по COSMO
+            [main + f'/inna_data_meteostation/{id_station}.csv', 'eco'  ],     # ECOMAG счет по станциям
+            [main + f'/inna_data_hybrid/{id_station}.csv'      , 'eco'  ],     # ECOMAG счет по COSMO с региональной СУД
+            [main + f'/inna_data_cosmo_koef/{id_station}.csv'  , 'eco'  ],     # ECOMAG счет по COSMO с поправочными коэффициентами
+            [main + f'/inna_data_meteo_koef/{id_station}.csv'  , 'eco'  ],     # ECOMAG счет по метеостанциям с поправочным коэффиентом
+            [main + f'/inna_meteo_field/{id_station}.csv'      , 'obs'  ],     # с маршрутными снегомерными наблюдениями в поле
+            [main + f'/inna_meteo_forest/{id_station}.csv'     , 'obs'  ],     # с маршрутными снегомерными наблюдениями в лесу
+            [main + f'/inna_meteo_1day/{id_station}.csv'       , 'sypon'],     # из SYPON (snow depth)
+            [main + f'/inna_meteo_1day/{id_station}.csv'       , 'synop'],     # из Sypon (temperature)
+        ]
+
     # Output folders:
     pout_data = main + '/result_data'
     pout_stat = main + '/statistica'
-    pout_plot = main + '/inna_comparison_plot'        
+    pout_plot = main + '/inna_comparison_plot'
     
     # Create output folders:
     pout_data = l4s.makefolder(pout_data)
@@ -255,30 +246,29 @@ if lmain_calc is True:
     # Cleaning previous results:
     l4s.cleah_history(f'{pout_plot}/')
     
-    # --          Option 1      Option 2      Option 3        
+    # --          Option 1      Option 2      Option 3
     ref_date1 = '2011-09-01' # '2013-09-01' #'2013-09-01'
     ref_date2 = '2012-06-30' # '2014-06-30' #'2018-05-31'
     n_periods = 7            #     5             1
-    years2add = 1            #     1             5    
+    years2add = 1            #     1             5
     
     # Settings for field and forest snow survey
-    lst4delta = ['snowe_swe'    , 'ecomag_model'     , 'ecomag_meteo'     , 
+    lst4delta = ['snowe_swe'    , 'ecomag_model'     , 'ecomag_meteo'     ,
                  'ecomag_hybrid', 'ecomag_cosmo_koef', 'ecomag_meteo_koef']
     if lfield_stations is True:
         refer = 'field'
     if lforest_stations is True:
-        refer = 'forest'        
-    
-    
+        refer = 'forest'
+
     # User settings:
     ws =  1.0 # line size
     ms = 50.0 # marker size
-    
+
     lst4plot_settings = {
         # Uniq settings for plot with 4 lines:
         'plot4' : {
             # Plot type ('line', 'scatter')
-            'mode' : ['line', 'line', 'scatter', 'scatter'],     
+            'mode' : ['line', 'line', 'scatter', 'scatter'],
             # Legend  (SnoWE, SYPON, полевые u лесные снегомерные маршруты)
             'label' : ['SnoWE', 'SYNOP', 'OBS (field)', 'OBS (forest)'],
             # line colors
@@ -290,11 +280,11 @@ if lmain_calc is True:
             # marker style (if 'mode' = 'line'    -> not active)
             'mstyle' : [  ''  ,   ''   ,     '^',   'o'  ],
             # marker size  (if 'mode' = 'line'    -> not active)
-            'msize'  : [   ms ,   ms   ,    ms  ,     ms ],                                    
+            'msize'  : [   ms ,   ms   ,    ms  ,     ms ],
         },
         # Uniq settings for plot with 5 lines:
         'plot5' : {
-            'mode' : ['line', 'line', 'line', 'scatter', 'scatter'],           
+            'mode' : ['line', 'line', 'line', 'scatter', 'scatter'],
             # Legend labels (SnoWE, Ecomag с: _COSMO, _станциям, полевые u лесные снегомерные маршруты)
             'label' : [
                 'SnoWE', 'ECOMAG COSMO', 'ECOMAG OBS', 'OBS (field)', 'OBS (forest)'],
@@ -311,7 +301,7 @@ if lmain_calc is True:
         },
         # Uniq settings for plot with 6 lines:
         'plot6' : {
-            'mode' : ['line', 'line', 'line', 'scatter', 'scatter', 'line'],         
+            'mode' : ['line', 'line', 'line', 'scatter', 'scatter', 'line'],
             # Legend labels
             'label' : [
                 'SnoWE',               # SnoWE
@@ -335,7 +325,7 @@ if lmain_calc is True:
         
         # Uniq settings for plot with 7 lines:
         'plot7' : {
-            'mode' : ['line', 'line', 'line', 'line', 'line', 'scatter', 'scatter'],         
+            'mode' : ['line', 'line', 'line', 'line', 'line', 'scatter', 'scatter'],
             # Legend labels
             'label' : [
                 'SnoWE',             # SnoWE
@@ -355,9 +345,9 @@ if lmain_calc is True:
             # marker style (if 'mode' = 'line'    -> not active)
             'mstyle' : [  ''  ,   '' ,    '',    ''  ,    ''  ,    '^' ,   'o'  ],
             # marker size  (if 'mode' = 'line'    -> not active)
-            'msize'  : [   ms ,   ms ,    ms,     ms ,    ms  ,    ms  ,    ms  ],                                              
+            'msize'  : [   ms ,   ms ,    ms,     ms ,    ms  ,    ms  ,    ms  ],
         },
-        
+
         # -- Common settings for all plots:
         # legend location
         'l_location' : 'upper left',
@@ -371,8 +361,8 @@ if lmain_calc is True:
         'rotation'   : 0.0,
         # size of numbers for X and Y axes
         'fsize'      : 14.0,
-        
-        # Settings for snow depth plot:     
+
+        # Settings for snow depth plot:
         'sd_plot' : {
             'plt_label'  : 'Snow depth',              # plot title,
             'y_label'    : 'Snow depth, sm',           # y axis label
@@ -419,100 +409,75 @@ if lmain_calc is True:
 
         #-- Create time filter (winter values):   
         periods = l4tp.get_time_periods(
-            ref_date1, ref_date2, n_periods, years2add)    
+            ref_date1, ref_date2, n_periods, years2add)
     
         #-- Apply time filter (winter values):
-        winter_data4station = []
-        for i in range(len(data4station)):
-            for t in range(n_periods):
-                # -- Select time range (t1 - start; t2 - stop)
-                t1 = periods[t][0]
-                t2 = periods[t][1]
-                winter_data4station.append(data4station[param][t1:t2])
+        for t in range(n_periods):
+            # -- Select time range (t1 - start; t2 - stop)
+            t1 = periods[t][0]
+            t2 = periods[t][1]
+            
+            # -- Convert t1 and t2 to str for output files in csv and png formats:
+            t1_out = str(t1)[0:11]
+            t2_out = str(t2)[0:11]
+            
+            # -- Define time settings for x axis
+            lst4plot_settings.get('xlimits')[0] = t1 # xmin
+            lst4plot_settings.get('xlimits')[1] = t2 # xmax
+            
+            # -- Get data with time filter:
+            winter_data4station = []
+            for i in range(len(data4station)):
+                winter_data4station.append(data4station[i][param][t1:t2])
         
-        # Статистическая обработка данных для полевых метеостанций.
-        if lstat_calc is True:
-            for i in range(len(winter_data4station)):
-                for t in range(n_periods):
-                    # -- Select time range (t1 - start; t2 - stop)
-                    t1 = periods[t][0]
-                    t2 = periods[t][1]
-                    # Select SnoWE, ECOMAG and field survey data
-                    if lfield_stations is True:
-                        df_stat_field = get_statistic(
-                            winter_data4station, lst4delta, refer, t1, t2, 
-                            lfield_stations, lforest_stations)
-                    # Select forest stations: 
-                    if lforest_stations is True:
-                        df_stat_field = get_statistic(
-                            winter_data4station, lst4delta, refer, t1, t2, 
-                            lfield_stations, lforest_stations)  
-        # End of Statistic section
-             
-        # Блок визуализации результатов
-        if lvisual is True:
-            for i in range(len(winter_data4station)):
-                for t in range(n_periods):
-                    # -- Select time range (t1 - start; t2 - stop)
-                    t1 = periods[t][0]
-                    t2 = periods[t][1]            
-                    
-                    # -- Define time settings for x axis
-                    lst4plot_settings.get('xlimits')[0] = t1 # xmin
-                    lst4plot_settings.get('xlimits')[1] = t2 # xmax
-                    
-                    # -- Create plots:
-                    # SWE plot
-                    fig = plt.figure(figsize = (14,10))
-                    ax = fig.add_subplot(111)
-                    try:
-                        l4v.create_plot(ax, winter_data4station[i], set4plots, plot_type, 'swe_plot', 'plot7')
-                        #l4v.create_plot(ax, winter_data4station[i], set4plots, plot_type, 'swe_plot', 'plot6')      
-                        #l4v.create_plot(ax, winter_data4station[i], set4plots, plot_type, 'swe_plot', 'plot5')
-                        # -- Save plot:
-                        t1_out = str(t1)[0:11]
-                        t2_out = str(t2)[0:11]
-                        
-                        plt.savefig(
-                            f'{pout_plot}/plot_swe_{t1_out}_{t2_out}.png',
-                            format = 'png',
-                            dpi = 300
-                        ) 
-                        plt.gcf().clear()   
-                        
-                    except NameError as error:
-                        print ( 'Exception: Problem with visualization - SWE. ', error )
+            # --Section: Statistical analysis.
+            if lstat_calc is True:
+                # Select SnoWE, ECOMAG and field survey data
+                if lfield_stations is True:
+                    df_stat_field = get_statistic(
+                        winter_data4station, lst4delta, refer, t1_out, t2_out,
+                        lfield_stations, lforest_stations)
+                # Select forest stations: 
+                if lforest_stations is True:
+                    df_stat_field = get_statistic(
+                        winter_data4station, lst4delta, refer, t1_out, t2_out,
+                        lfield_stations, lforest_stations)  
+            # End of Statistic section
 
-                    # SD plot
-                    fig = plt.figure(figsize = (14,10))
-                    bx = fig.add_subplot(111)   
-                    
-                    try:
-                        l4v.create_plot(ax1, [snowe_sd, in_situ_sd, field_sd, forest_sd,], set4plots, plot_type, script)
-                        # -- Save plot:
-                        t1_out = str(t1)[0:11]
-                        t2_out = str(t2)[0:11]
-                        plt.savefig(
-                            f'{pout_plot}/plot_sd_{t1_out}_{t2_out}.png',
-                            format = 'png',
-                            dpi = 300
-                        ) 
-                        plt.gcf().clear()
-                    except NameError as error:
-                        print ( 'Exception: Problem with visualization - SD. ', error )      
-        # End of visualization section
+            # -- Section: Data visualization
+            if lvisual is True:
+                # -- Create plots:
+                # SWE plot
+                fig = plt.figure(figsize = (14,10))
+                ax = fig.add_subplot(111)
+                try:
+                    l4v.create_plot(ax, winter_data4station, set4plots, plot_type, 'swe_plot', 'plot7')
+                    #l4v.create_plot(ax, winter_data4station, set4plots, plot_type, 'swe_plot', 'plot6')
+                    #l4v.create_plot(ax, winter_data4station, set4plots, plot_type, 'swe_plot', 'plot5')
+                    plt.savefig(
+                        f'{pout_plot}/plot_swe_{t1_out}_{t2_out}.png',
+                            format = 'png', dpi = 300                ) 
+                    plt.gcf().clear()
+                except NameError as error:
+                    print ( 'Exception: Problem with visualization - SWE. ', error )
+
+                # SD plot
+                fig = plt.figure(figsize = (14,10))
+                bx = fig.add_subplot(111)
+                try:
+                    l4v.create_plot(ax1, [snowe_sd, in_situ_sd, field_sd, forest_sd,], set4plots, plot_type, script)
+                    # -- Save plot:
+                    plt.savefig(
+                        f'{pout_plot}/plot_sd_{t1_out}_{t2_out}.png',
+                        format = 'png', dpi = 300                   ) 
+                    plt.gcf().clear()
+                except NameError as error:
+                    print ( 'Exception: Problem with visualization - SD. ', error )
+            # End of visualization section
         
         
-        # Section: Calculating recalculation coefficients.
-        if lrecal_coef is True:
-            for t in range(n_periods):
-                # -- Select time range (t1 - start; t2 - stop)
-                t1 = periods[t][0]
-                t2 = periods[t][1]   
-                        
-                # -- Output settings:
-                t1_out = str(t1)[0:11]
-                t2_out = str(t2)[0:11]
+            # Section: Calculating recalculation coefficients.
+            if lrecal_coef is True:
                 pout_csv = f'{pout_data}/{id_station}_{t1_out}_{t2_out}.csv'
                 try:    
                     df_data_koef = cal_coef(
@@ -523,6 +488,7 @@ if lmain_calc is True:
                         pout_csv) 
                 except NameError as error:
                     print ('Exception: Recalculation coefficient.', error) 
-        # end of section  
+            # end of section  
+        # end of time step
     # end of calculations for station
         

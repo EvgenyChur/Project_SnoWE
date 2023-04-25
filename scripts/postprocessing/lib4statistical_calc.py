@@ -112,21 +112,17 @@ def cacl_RMSE_profit(ts, ts_refer):
     return rmse_imp
 # End of function!
 
-
 # Function 5 --> cal_stat_values
-def cal_stat_values(df, lst4delta, refer):
+def cal_stat_values(df, lst4delta:list, refer:str):
     '''
     Task: Create output dataframe with statistical information for North Dvina
           model experiments!
 
     Parameters
     ----------
-    df : DataFrame
-        Initial dataframe with data
-    lst4delta : List, str
-        Columns for analysis
-    refer : str
-        Reference dataset (column).
+    df : DataFrame --> Initial dataframe with data
+    lst4delta : STR -> Columns for analysis
+    refer : Reference dataset (column).
 
     Returns
     -------
@@ -169,8 +165,9 @@ def cal_stat_values(df, lst4delta, refer):
                 'MEAN'  , 'STD'  , 'MAE'  , 'RMSE'  , '% MAE'       , '% RMSE'       ],
             )
         )
-        # Create output dataset with statistical values:
-        df_stat = pd.concat(lst4stat_values, axis = 1)
+
+    # Create output dataset with statistical values:
+    df_stat = pd.concat(lst4stat_values, axis = 1)
 
     return df_stat
 # End of function!
