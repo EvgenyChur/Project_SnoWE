@@ -26,6 +26,7 @@ from matplotlib import rcParams
 import lib4visualization as l4v
 import lib4time_periods as l4tp
 import lib4processing as l4p
+import lib4system_suport as l4s
 
 #=============================   Personal functions   ======================
 def create_table(df_model, df_fact, params:list, pout:str, fn_station:str):
@@ -124,6 +125,11 @@ lst4plot_settings = {
 kg2g = 1000.0 # convert kg to gramm
 #=============================    Main program   ==============================
 if __name__ == '__main__': 
+    # -- create output folder
+    pout = l4s.makefolder(pout)
+    # -- clean previous results:
+    l4s.clean_history(pout)
+    
     # Data preprocessing. Select data for stations from and save the as 
     # separete .csv files:
     if lprep_data is  True:

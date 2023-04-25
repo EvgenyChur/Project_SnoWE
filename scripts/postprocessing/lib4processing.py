@@ -17,7 +17,10 @@ Version    Date       Name
 import sys
 import pandas as pd
 
-def get_csv_data(path:str, separ = ';', skiprow = 0):
+def get_csv_data(
+    path:str, separ = ';', skiprow = 0, headers = 'infer',
+    nan_values = ['9990','********']):
+
     '''
     Task: Get preprocessed data
 
@@ -38,8 +41,9 @@ def get_csv_data(path:str, separ = ';', skiprow = 0):
         dayfirst = True,
         parse_dates = True,
         index_col = [0],
+        header = headers,
         skipinitialspace = True,
-        na_values= ['9990','********'],
+        na_values= nan_values,
     )
 
 def get_ecomag_data(path:str, sypot_stations:list, path_out:str):

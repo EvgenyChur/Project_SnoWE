@@ -1,168 +1,165 @@
 # -*- coding: utf-8 -*-
 """
-Created on Mon Aug 20 15:50:35 2018
+Description: Программа для работы с метеорологическими данными, полученными из
+             SYNOP кода с помощью скрипта (все данные в 1 файле) на tornado
+             Программа осуществляет расчет среднесуточных значений
+             метеорологических параметров
 
-@author: Evgenii Churiulin
-Программа для работы с метеорологическими данными, полученными из SYNOP кода с помощью скрипта (все данные в 1 файле) на tornado 
-Программа осуществляет расчет среднесуточных значений метеорологических параметров
+Authors: Evgenii Churiulin
 
+Current Code Owner: MPI-BGC, Evgenii Churiulin
+phone:  +49  170 261-5104
+email:  evgenychur@bgc-jena.mpg.de
 
+History:
+Version    Date       Name
+---------- ---------- ----
+    1.1    20.08.2018 Evgenii Churiulin, RHMS
+           Initial release
+    1.1    20.04.2023 Evgenii Churiulin, MPI-BGC
+           Deep modernization
 """
-import pandas as pd
+# =============================     Import modules     ======================
+# 1.1: Standard modules
 import os
-import datetime
 import numpy as np
+import pandas as pd
 
-"""
-#Версия для работы по одной станции
-fileName = '26825.csv'
-iPath = 'D:/Churyulin/msu_cosmo/Data_Natalia_Leonidovna/Data/{}'.format(fileName)
-"""
+# 1.2 Personal module
+import lib4system_suport as l4s
+import lib4processing as l4p
 
+# =============================   Personal functions   ======================
 
-#Путь к папке, где хранится исходная метеорологическая информация
+# ================   User settings (have to be adapted)  ====================
+# Logical settings:
+lprep_calc = True # Do you want to run preprocessing? (True / False)
+                  # Otherwise you can combine data in one dataset
 
-#Первичный счет
-#data = 'D:/Churyulin/DON/meteo_2000_2010/'
-data = 'D:/Churyulin/DVINA/2011-2019/'
+# Select data paths:
+mode = 'dvina'
 
-#Для слияния
-#data_1 = 'D:/Churyulin/DON/result_2000_2010/' 
-#data_2 = 'D:/Churyulin/DON/result_2011_2019/'
+# Common path for all data:
+main = 'D:/Churyulin'
 
+if lprep_calc is True:
+    # Catalog of input paths:
+    pin_catalog = {
+        'moscow'   : main + '/msu_cosmo/Moscow_data/2000 - 2010/',
+        'precip'   : main + '/snow data(ivan)/precipitation/',
+        '4snowe'   : main + '/snow data(ivan)/inna_meteo_real/',
+        'ivan_data': main + '/Ivan/data/',                                      # путь к данным по запросу студента Вани
+        'inna_data': main + '/msu_cosmo/forecast/meteorological_data_oper/',    # путь к данным по запросу Инны Николаевны для Северной Двины
+        'dvina'    : main + '/DVINA/2011-2019/',
+        'don'      : main + '/DON/meteo_2000_2010/',
+    }
+    # Catalog of output paths:
+    pout_catalog = {
+        'don_data' : main + '/msu_cosmo/Data_Natalia_Leonidovna/Result_2000_2010/',
+        'moscow'   : main + '/msu_cosmo/Moscow_data/result_2000_2010/',
+        'precip'   : main + '/snow data(ivan)/result_data/',
+        '4snowe'   : main + '/snow data(ivan)/inna_meteo_1day/',
+        'ivan_data': main + '/Ivan/result/',                                    # путь к данным по запросу студента Вани
+        'inna_data': main + '/msu_cosmo/forecast/in_situ_oper/',                # путь к данным по запросу Инны Николаевны для Северной Двины
+        'dvina'    : main + '/DVINA/result_2011_2019',
+        'don'      : main + '/DON/result_2000_2010/',
+    }
 
-#data = 'D:/Churyulin/msu_cosmo/Moscow_data/2000 - 2010/'
-#data = 'D:/Churyulin/snow data(ivan)/precipitation/'
-#data = 'D:/Churyulin/snow data(ivan)/inna_meteo_real/'
-#data = 'D:/Churyulin/Ivan/data/' # путь к данным по запросу студента Вани
-#data = 'D:/Churyulin/msu_cosmo/forecast/meteorological_data_oper/' #путь к данным по запросу Инны Николаевны для Северной Двины
+    # Get actual input and output paths:
+    pin = pin_catalog.get(mode)
+    pout = pout_catalog.get(mode)
 
-#Первичный счет
-dirs_csv = sorted(os.listdir(data))
+# -- You combine data from preprocessing step into 1 new output table
+else:
+    # Get actual input and output paths:
+    pin1 = 'D:/Churyulin/DON/result_2000_2010/'
+    pin2 = 'D:/Churyulin/DON/result_2011_2019/'
+    pout = 'D:/Churyulin/DON/final'
 
-#Для слияния
-#dirs_csv_1 = sorted(os.listdir(data_1))
-#dirs_csv_2 = sorted(os.listdir(data_2))
+# List of parameters for research:
+params = [
+        'date', 'index', 'lat'  , 'lon'   , 'height', 'ps'   , 'pmsl', 't2m',
+        'td2m', 'dd10m', 'ff10m', 'tmin2m', 'tmax2m', 'tming', 'R12' , 'R24',
+        't_g' , 'hsnow',
+    ]
 
+# Frequency for resampling
+freq = '1D' # '1M'
 
-#result_exit = 'D:/Churyulin/DON/result_2000_2010/'
-result_exit = 'D:/Churyulin/DVINA/result_2011_2019/'
-#result_exit = 'D:/Churyulin/DON/final/'
+# =============================    Main program   ==========================
+if __name__ == '__main__':
+    if lprep_calc is True:
+        # Create output folder:
+        pout = l4s.makefolder(pout)
 
-
-#result_exit = 'D:/Churyulin/msu_cosmo/Data_Natalia_Leonidovna/Result_2000_2010/'
-#result_exit = 'D:/Churyulin/msu_cosmo/Moscow_data/result_2000_2010/'
-#result_exit = 'D:/Churyulin/snow data(ivan)/result_data/'
-#result_exit = 'D:/Churyulin/snow data(ivan)/inna_meteo_1day/'
-#result_exit = 'D:/Churyulin/Ivan/result/' # путь к данным (результат) для студента Вани
-#result_exit = 'D:/Churyulin/msu_cosmo/forecast/in_situ_oper/' #путь к данным по запросу Инны Николаевны для Северной Двины
-
-dirs_exit = os.listdir(result_exit) #Очистка результатов предыдушей работы скрипта, для получения лучшего результатат
-for file in dirs_exit:
-    os.remove(result_exit + file)
-
-#Работа с временным рядом по метеостанции
-for data_file in dirs_csv:
-    fileName_csv = data_file
-    #Первичный счет
-    iPath_1 = (data + fileName_csv)
-    #Для слияния 1 и 2 источника в один
-    #iPath_1 = (data_1 + fileName_csv)
-    #iPath_2 = (data_2 + fileName_csv)
+        # Cleaning previous results:
+        l4s.clean_history(pout)
     
-    #df = pd.read_csv(iPath_1, skiprows = 0, sep=';', dayfirst = True, parse_dates = True, header = None, skipinitialspace = True, na_values= ['9990',9990.0,'******','********'])
-    df = pd.read_csv(iPath_1, skiprows = 0, sep=';', dayfirst = True, parse_dates = True, header = None, skipinitialspace = True, na_values= ['******','********'])
-    df = df.drop_duplicates(keep = False)
-    df=df.drop([5,6,13,14,15,16,17,18,19,20,21,22,23,24,28,33,34,35,36,37,38,39,40,41,42,43,44,45,46], axis=1)
-    df.columns = [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17]
-    #print ('Columns:'), df.columns
-    date = pd.to_datetime(df[0])
-    index_meteo = pd.Series(df[1].values, index = date, dtype = 'float')
-    lat = pd.Series(df[2].values, index = date, dtype = 'float')
-    lon = pd.Series(df[3].values, index = date, dtype = 'float')
-    height = pd.Series(df[4].values, index = date, dtype = 'float')
-    ps = pd.Series(df[5].values, index = date, dtype = 'float')
-    pmsl = pd.Series(df[6].values, index = date, dtype = 'float')
-    t2m = pd.Series(df[7].values, index = date, dtype = 'float')
-    td2m = pd.Series(df[8].values, index = date, dtype = 'float')
-    dd10m = pd.Series(df[9].values, index = date, dtype = 'float')
-    ff10m = pd.Series(df[10].values, index = date, dtype = 'float')
-    tmin2m = pd.Series(df[11].values, index = date, dtype = 'float')
-    tmax2m = pd.Series(df[12].values, index = date, dtype = 'float')
-    tming = pd.Series(df[13].values, index = date, dtype = 'float')
-    R12 = pd.Series(df[14].values, index = date, dtype = 'float')
-    # R12 = R12.replace(9990, np.nan)
-    R12[ R12 == 9990.0 ] =  np.nan
-    R24 = pd.Series(df[15].values, index = date, dtype = 'float')
-    R24[ R24 == 9990.0 ] =  np.nan
-    t_g = pd.Series(df[16].values, index = date, dtype = 'float')
-    hsnow = pd.Series(df[17].values, index = date, dtype = 'float')
+        # Start preprocessing:
+        for file in sorted(os.listdir(pin)):
+            # -- Get data:
+            df = (l4p.get_csv_data(f'{pin}{file}',
+                                   headers = None,
+                                   nan_values = ['******','********'])
+                     .drop_duplicates(keep = False)
+                     # Delete columns with unuseful information
+                     .drop([ 5,  6, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22,
+                            23, 24, 28, 33, 34, 35, 36, 37, 38, 39, 40, 41,
+                            42, 43, 44, 45, 46], axis = 1)
+            )
 
-    
-    index_meteo = index_meteo.resample('d').mean()
-    lat = lat.resample('d').mean()
-    lon = lon.resample('d').mean()
-    height = height.resample('d').mean()    
-    ps = ps.resample('d').mean()
-    pmsl = pmsl.resample('d').mean()
-    t2m = t2m.resample('d').mean()
-    td2m = td2m.resample('d').mean()
-    dd10m = dd10m.resample('d').mean()
-    ff10mean = ff10m.resample('d').mean()
-    ff10max = ff10m.resample('d').max()
-    tmin2m = tmin2m.resample('d').mean()
-    tmax2m = tmax2m.resample('d').mean()
-    tming = tming.resample('d').mean()
-    R12 = R12.resample('d').mean()
-    R24 = R24.resample('d').mean()
-    t_g = t_g.resample('d').mean()
-    hsnow = hsnow.resample('d').mean()
-    
-    """
-    index_meteo = index_meteo.resample('M').mean()
-    lat = lat.resample('M').mean()
-    lon = lon.resample('M').mean()
-    height = height.resample('M').mean()    
-    ps = ps.resample('M').mean()
-    pmsl = pmsl.resample('M').mean()
-    t2m = t2m.resample('M').mean()
-    td2m = td2m.resample('M').mean()
-    dd10m = dd10m.resample('M').mean()
-    ff10mean = ff10m.resample('M').mean()
-    ff10max = ff10m.resample('M').max()
-    tmin2m = tmin2m.resample('M').mean()
-    tmax2m = tmax2m.resample('M').mean()
-    tming = tming.resample('M').mean()
-    R12 = R12.resample('M').sum()
-    R24 = R24.resample('M').sum()
-    t_g = t_g.resample('M').mean()
-    hsnow = hsnow.resample('M').mean()
-    """
-    #Cоединяем данные в один датафрейм 
-    index_meteo.index = lat.index = lon.index = height.index = ps.index = pmsl.index = t2m.index = td2m.index = dd10m.index = ff10mean.index = ff10max.index = tmin2m.index = tmax2m.index = tming.index = R12.index = R24.index = t_g.index = hsnow.index 
-    df_data = pd.concat([index_meteo, lat, lon, height, ps, pmsl, t2m,
-                         td2m, dd10m, ff10mean, ff10max, tmin2m, tmax2m, tming,
-                         R12,R24, t_g, hsnow], axis = 1)
+            # -- Rename columns:
+            # df.columns = [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17] --> old version
+            for i in range(len(list(df.columns.values))):
+                df = df.rename(columns = {list(df.columns.values)[i]:params[i]})
+            print ('Columns:'), df.columns
 
-    df_data.to_csv(result_exit + fileName_csv[0:5] +'.csv', sep=';', float_format='%.3f',
-                   header = ['index','lat','lon','height','ps','pmsl','t2m','td2m',
-                             'dd10m','ff10meanm', 'ff10max','tMin2m','tMax2m','tMinG','R12','R24',
-                             't_g','hSnow'], index_label = 'Date')
-    
+            # -- Change data type for column and use it as index
+            df['date'] = pd.to_datetime(df['date'])
+            df = df.reset_index(drop=True).set_index('date')
 
-    
-    #Версия скрипта для последующего слияния 1 и 2 части в один общий документ
-    """
-    df_1 = pd.read_csv(iPath_1, skiprows = 0, sep=';', dayfirst = True, parse_dates = True, index_col = [0], 
-                       skipinitialspace = True, na_values= ['******','********'])
-       
-    df_2 = pd.read_csv(iPath_2, skiprows = 0, sep=';', dayfirst = True, parse_dates = True, index_col = [0],
-                       skipinitialspace = True, na_values= ['******','********'])
-    
-    df_data = pd.concat([df_1, df_2])
-    df_data.to_csv(result_exit + fileName_csv[0:5] +'.csv', sep=';', float_format='%.3f',
-                   header = ['index','lat','lon','height','ps','pmsl','t2m','td2m',
-                             'dd10m','ff10m','tMin2m','tMax2m','tMinG','R12','R24',
-                             't_g','hSnow'], index_label = 'Date')
-    """
-    
+            # -- Make data corrections:
+            for var in params[1:]:
+                if var == 'ff10m':
+                    df['ff10mean'] = df[var].resample(freq).mean()
+                    df['ff10max']  = df[var].resample(freq).max()
+                elif var in ['R12', 'R24']:
+                      df[var][df[var] == 9990.0 ] = np.nan
+                      if freq != '1D':
+                          df[var] = df[var].resample(freq).sum()
+                      else:
+                          df[var] = df[var].resample(freq).mean()
+                else:
+                    df[var] = df[var].resample(freq).mean()
+
+            # -- Delete field:
+            df = df.drop(['ff10m'], axis = 1)
+
+            # -- Save new dataframe
+            df.to_csv(
+                f'{pout}/{file[0:5]}.csv', sep=';', float_format='%.3f',
+                index_label = 'Date')
+    else:
+        # Get sorted lists of preprocessed data:
+        dirs1 = sorted(os.listdir(pin1))
+        dirs2 = sorted(os.listdir(pin2))
+
+        # Create output folder:
+        pout = l4s.makefolder(pout)
+        # Cleaning previous results:
+        l4s.clean_history(pout)
+
+        if len(dirs1) == len(dirs2):
+            for file in sorted(os.listdir(dirs1)):
+                df1 = l4p.get_csv_data(f'{pin1}{file}', nan_values = ['******','********'])
+                df2 = l4p.get_csv_data(f'{pin2}{file}', nan_values = ['******','********'])
+
+                # Concat data
+                df_data = pd.concat([df1, df2])
+
+                # -- Save output file:
+                df_data.to_csv(
+                    f'{pout}/{file}.csv', sep=';', float_format='%.3f',
+                    index_label = 'Date'
+                )
+# =============================    End of program   ========================

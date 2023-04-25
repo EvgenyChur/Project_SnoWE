@@ -174,7 +174,7 @@ if lprep_calc is True:
 
     # Cleaning previous results:
     for path in pout_catalog:
-        l4s.cleah_history(path)
+        l4s.clean_history(path)
 
     # List of meteorological station for research (SYPON) ->
     # (change ECOMAD stations to current values)
@@ -244,7 +244,7 @@ if lmain_calc is True:
     pout_plot = l4s.makefolder(pout_plot)
 
     # Cleaning previous results:
-    l4s.cleah_history(f'{pout_plot}/')
+    l4s.clean_history(f'{pout_plot}/')
     
     # --          Option 1      Option 2      Option 3
     ref_date1 = '2011-09-01' # '2013-09-01' #'2013-09-01'
