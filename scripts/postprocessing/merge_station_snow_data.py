@@ -4,6 +4,9 @@ Description: Программа для работы с метеорологич�
              SYNOP кода с помощью скрипта (все данные в 1 файле) на tornado
              Программа осуществляет расчет среднесуточных значений
              метеорологических параметров
+             
+             Initial data for working were calculated based on REMDB script 
+             created by Denis Blinov
 
 Authors: Evgenii Churiulin
 
@@ -17,7 +20,10 @@ Version    Date       Name
     1.1    20.08.2018 Evgenii Churiulin, RHMS
            Initial release
     1.1    20.04.2023 Evgenii Churiulin, MPI-BGC
-           Deep modernization
+           Deep modernization based on the previous version of the current script,
+           mergetime_station_data.py, option_1_of_script_1_day.py, 
+           Moscow_meteo_covrter.py
+           
 """
 # =============================     Import modules     ======================
 # 1.1: Standard modules
@@ -31,10 +37,64 @@ import lib4processing as l4p
 
 # =============================   Personal functions   ======================
 
+def val_correction(ts, lim1:int, lim2:int, var:str):
+    '''
+    # Task: Correction of rude data errors
+
+    Parameters
+    ----------
+    ts : Series --> Timeseries of the research paramer.
+    lim1 : Maximum adequate values of the research parameter 
+    lim2 : Minimal adequate values of the research parameter
+    var  : Research parameter
+
+    Returns
+    -------
+    ts : Series --> Corrected timeseries of the research paramer.
+    '''
+    
+    for i, j in enumerate(ts):
+        # Коррекция данных по сумме осадков
+        if var in ['R12', 'R24']:
+            if ((j > lim1) or (np.isnan(ts[i]))):
+                ts[i] = 0
+            elif (ts[i] - ts[i - 1]) > lim2:
+                ts[i] = (ts[i + 1 ] + ts[i - 1]) / 2
+
+        # Коррекция данных по температуре
+        if var == 't2m':
+            if j > lim1:
+                ts[i] = ts[i - 1]
+            elif j < lim2:
+                ts[i] = ts[i - 1]
+
+        # Коррекция данных по температуре точке росы, Tmin, Tmax, Tg
+        if var in ['td2m', 'tmin2m', 'tmax2m', 't_g']:
+            if (ts[i] - ts[i - 1]) > lim1:
+                ts[i] = ts[i - 1]
+            elif (ts[i] - ts[i - 1]) < lim2:
+                ts[i] = ts[i - 1]
+
+        # Коррекция данных по высоте снега 
+        if var in ['hsnow']:
+            if j > lim1:
+                ts[i] = np.nan
+            elif (ts[i] - ts[i - 1])  > lim2:
+                ts[i] = ts[i - 1]
+            # Check NaN values:
+            if (np.isnan(ts[i])     and not 
+                np.isnan(ts[i - 1]) and not 
+                np.isnan(ts[i + 1])):
+                ts[i] = ts[i - 1]
+    return ts
+    
+    
+    
 # ================   User settings (have to be adapted)  ====================
 # Logical settings:
 lprep_calc = True # Do you want to run preprocessing? (True / False)
                   # Otherwise you can combine data in one dataset
+ldelete = False
 
 # Select data paths:
 mode = 'dvina'
@@ -46,10 +106,11 @@ if lprep_calc is True:
     # Catalog of input paths:
     pin_catalog = {
         'moscow'   : main + '/msu_cosmo/Moscow_data/2000 - 2010/',
+        'moscow_1d': main + '/msu_cosmo/Moscow_data/Initial_data/',            # path from moscow_meteo_covrter.py
         'precip'   : main + '/snow data(ivan)/precipitation/',
         '4snowe'   : main + '/snow data(ivan)/inna_meteo_real/',
-        'ivan_data': main + '/Ivan/data/',                                      # путь к данным по запросу студента Вани
-        'inna_data': main + '/msu_cosmo/forecast/meteorological_data_oper/',    # путь к данным по запросу Инны Николаевны для Северной Двины
+        'ivan_data': main + '/Ivan/data/',                                     # путь к данным по запросу студента Вани
+        'inna_data': main + '/msu_cosmo/forecast/meteorological_data_oper/',   #  путь к данным по запросу Инны Николаевны для Северной Двины
         'dvina'    : main + '/DVINA/2011-2019/',
         'don'      : main + '/DON/meteo_2000_2010/',
     }
@@ -57,10 +118,11 @@ if lprep_calc is True:
     pout_catalog = {
         'don_data' : main + '/msu_cosmo/Data_Natalia_Leonidovna/Result_2000_2010/',
         'moscow'   : main + '/msu_cosmo/Moscow_data/result_2000_2010/',
+        'moscow_1d': main + '/msu_cosmo/Moscow_data/Real_data_series/',        # path from moscow_meteo_covrter.py
         'precip'   : main + '/snow data(ivan)/result_data/',
         '4snowe'   : main + '/snow data(ivan)/inna_meteo_1day/',
-        'ivan_data': main + '/Ivan/result/',                                    # путь к данным по запросу студента Вани
-        'inna_data': main + '/msu_cosmo/forecast/in_situ_oper/',                # путь к данным по запросу Инны Николаевны для Северной Двины
+        'ivan_data': main + '/Ivan/result/',                                   # путь к данным по запросу студента Вани
+        'inna_data': main + '/msu_cosmo/forecast/in_situ_oper/',               # путь к данным по запросу Инны Николаевны для Северной Двины
         'dvina'    : main + '/DVINA/result_2011_2019',
         'don'      : main + '/DON/result_2000_2010/',
     }
@@ -72,9 +134,23 @@ if lprep_calc is True:
 # -- You combine data from preprocessing step into 1 new output table
 else:
     # Get actual input and output paths:
-    pin1 = 'D:/Churyulin/DON/result_2000_2010/'
-    pin2 = 'D:/Churyulin/DON/result_2011_2019/'
-    pout = 'D:/Churyulin/DON/final'
+    pin_catalog = {
+        'don'   : [main + '/DON/result_2000_2010/',
+                   main + '/DON/result_2011_2019/',
+        ],
+        'dvina' : [main + '/DVINA/result_2000_2010/',
+                   main + '/DVINA/result_2011_2019/',
+        ],
+    }
+    
+    pout_catalog = {
+        'don'   : main + '/DON/final',
+        'dvina' : main + '/DVINA/result_2000_2019'
+    }
+    
+    pin1 = pin_catalog.get(mode)[0]
+    pin2 = pin_catalog.get(mode)[1]
+    pout = pout_catalog.get(mode)[1]
 
 # List of parameters for research:
 params = [
@@ -151,12 +227,37 @@ if __name__ == '__main__':
 
         if len(dirs1) == len(dirs2):
             for file in sorted(os.listdir(dirs1)):
-                df1 = l4p.get_csv_data(f'{pin1}{file}', nan_values = ['******','********'])
-                df2 = l4p.get_csv_data(f'{pin2}{file}', nan_values = ['******','********'])
+                
+                df_2000_2010 = l4p.get_csv_data(f'{pin1}/{file}')
+                df_2011_2019 = l4p.get_csv_data(f'{pin2}/{file}')
 
                 # Concat data
-                df_data = pd.concat([df1, df2])
-
+                df_data = (pd.concat([df_2000_2010, df_2011_2019])
+                             .drop_duplicates()
+                )
+                print ('Columns:', df_data.columns)
+                
+                
+                # Delete columns (depending on furher purpose):
+                if ldelete is True:
+                    lst4delete = [
+                        'lat'  , 'lon'      , 'height' , 'ps'    , 'pmsl'  , 
+                        'dd10m', 'ff10meanm', 'ff10max', 'tMin2m', 'tMax2m',
+                        'tMinG', 'R12'      , 't_g'    , 'hSnow' ]
+                    
+                    df_data = df_data.drop(lst4delete, axis = 1)
+                
+                # Start correction procedure of rude errors in data:
+                # Коррекция данных:
+                df_data['R12']    = val_correction(df_data['R12']   ,  99,  50, 'R12'   )   # по сумме осадков за 12 часов
+                df_data['R24']    = val_correction(df_data['R24']   ,  99,  50, 'R24'   )   # по сумме осадков за 24 часа
+                df_data['t2m']    = val_correction(df_data['t2m']   ,  45, -45, 't2m'   )   # по температуре
+                df_data['td2m']   = val_correction(df_data['td2m']  ,  35, -35, 'td2m'  )   # по температуре точке росы
+                df_data['tmin2m'] = val_correction(df_data['tmin2m'],  35, -35, 'tmin2m')   # по минимальной температуре воздуха
+                df_data['tmax2m'] = val_correction(df_data['tmax2m'],  35, -35, 'tmax2m')   # по максимальной температуре воздуха
+                df_data['t_g']    = val_correction(df_data['t_g']   ,  60, -60, 't_g'   )   # по tg
+                df_data['hsnow']  = val_correction(df_data['hsnow'] , 200,  65, 'hsnow' )   # по высоте снега 
+                        
                 # -- Save output file:
                 df_data.to_csv(
                     f'{pout}/{file}.csv', sep=';', float_format='%.3f',
