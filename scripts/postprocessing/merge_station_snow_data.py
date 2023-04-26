@@ -4,7 +4,7 @@ Description: Программа для работы с метеорологич�
              SYNOP кода с помощью скрипта (все данные в 1 файле) на tornado
              Программа осуществляет расчет среднесуточных значений
              метеорологических параметров
-             
+
              Initial data for working were calculated based on REMDB script 
              created by Denis Blinov
 
@@ -23,7 +23,6 @@ Version    Date       Name
            Deep modernization based on the previous version of the current script,
            mergetime_station_data.py, option_1_of_script_1_day.py, 
            Moscow_meteo_covrter.py
-           
 """
 # =============================     Import modules     ======================
 # 1.1: Standard modules
@@ -34,7 +33,6 @@ import pandas as pd
 # 1.2 Personal module
 import lib4system_suport as l4s
 import lib4processing as l4p
-
 # =============================   Personal functions   ======================
 
 def val_correction(ts, lim1:int, lim2:int, var:str):
@@ -44,7 +42,7 @@ def val_correction(ts, lim1:int, lim2:int, var:str):
     Parameters
     ----------
     ts : Series --> Timeseries of the research paramer.
-    lim1 : Maximum adequate values of the research parameter 
+    lim1 : Maximum adequate values of the research parameter
     lim2 : Minimal adequate values of the research parameter
     var  : Research parameter
 
@@ -52,7 +50,7 @@ def val_correction(ts, lim1:int, lim2:int, var:str):
     -------
     ts : Series --> Corrected timeseries of the research paramer.
     '''
-    
+
     for i, j in enumerate(ts):
         # Коррекция данных по сумме осадков
         if var in ['R12', 'R24']:
@@ -87,9 +85,7 @@ def val_correction(ts, lim1:int, lim2:int, var:str):
                 np.isnan(ts[i + 1])):
                 ts[i] = ts[i - 1]
     return ts
-    
-    
-    
+
 # ================   User settings (have to be adapted)  ====================
 # Logical settings:
 lprep_calc = True # Do you want to run preprocessing? (True / False)
@@ -142,12 +138,12 @@ else:
                    main + '/DVINA/result_2011_2019/',
         ],
     }
-    
+
     pout_catalog = {
         'don'   : main + '/DON/final',
         'dvina' : main + '/DVINA/result_2000_2019'
     }
-    
+
     pin1 = pin_catalog.get(mode)[0]
     pin2 = pin_catalog.get(mode)[1]
     pout = pout_catalog.get(mode)[1]
@@ -167,10 +163,8 @@ if __name__ == '__main__':
     if lprep_calc is True:
         # Create output folder:
         pout = l4s.makefolder(pout)
-
         # Cleaning previous results:
         l4s.clean_history(pout)
-    
         # Start preprocessing:
         for file in sorted(os.listdir(pin)):
             # -- Get data:
@@ -183,7 +177,6 @@ if __name__ == '__main__':
                             23, 24, 28, 33, 34, 35, 36, 37, 38, 39, 40, 41,
                             42, 43, 44, 45, 46], axis = 1)
             )
-
             # -- Rename columns:
             # df.columns = [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17] --> old version
             for i in range(len(list(df.columns.values))):
@@ -207,10 +200,8 @@ if __name__ == '__main__':
                           df[var] = df[var].resample(freq).mean()
                 else:
                     df[var] = df[var].resample(freq).mean()
-
             # -- Delete field:
             df = df.drop(['ff10m'], axis = 1)
-
             # -- Save new dataframe
             df.to_csv(
                 f'{pout}/{file[0:5]}.csv', sep=';', float_format='%.3f',
@@ -219,25 +210,19 @@ if __name__ == '__main__':
         # Get sorted lists of preprocessed data:
         dirs1 = sorted(os.listdir(pin1))
         dirs2 = sorted(os.listdir(pin2))
-
         # Create output folder:
         pout = l4s.makefolder(pout)
         # Cleaning previous results:
         l4s.clean_history(pout)
-
         if len(dirs1) == len(dirs2):
             for file in sorted(os.listdir(dirs1)):
-                
                 df_2000_2010 = l4p.get_csv_data(f'{pin1}/{file}')
                 df_2011_2019 = l4p.get_csv_data(f'{pin2}/{file}')
-
                 # Concat data
                 df_data = (pd.concat([df_2000_2010, df_2011_2019])
                              .drop_duplicates()
                 )
                 print ('Columns:', df_data.columns)
-                
-                
                 # Delete columns (depending on furher purpose):
                 if ldelete is True:
                     lst4delete = [
@@ -246,7 +231,7 @@ if __name__ == '__main__':
                         'tMinG', 'R12'      , 't_g'    , 'hSnow' ]
                     
                     df_data = df_data.drop(lst4delete, axis = 1)
-                
+
                 # Start correction procedure of rude errors in data:
                 # Коррекция данных:
                 df_data['R12']    = val_correction(df_data['R12']   ,  99,  50, 'R12'   )   # по сумме осадков за 12 часов
@@ -257,7 +242,7 @@ if __name__ == '__main__':
                 df_data['tmax2m'] = val_correction(df_data['tmax2m'],  35, -35, 'tmax2m')   # по максимальной температуре воздуха
                 df_data['t_g']    = val_correction(df_data['t_g']   ,  60, -60, 't_g'   )   # по tg
                 df_data['hsnow']  = val_correction(df_data['hsnow'] , 200,  65, 'hsnow' )   # по высоте снега 
-                        
+
                 # -- Save output file:
                 df_data.to_csv(
                     f'{pout}/{file}.csv', sep=';', float_format='%.3f',

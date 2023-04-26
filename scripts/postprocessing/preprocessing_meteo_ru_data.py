@@ -6,15 +6,6 @@ Description: Script for preprocessing of data (snow depth, snow water equivalent
 
 Authors: Evgenii Churiulin,
 
-Previously used: (not relevant)
-year = df.iloc[:,1]
-mon = df.iloc[:,2]
-day = df.iloc[:,4]
-meteo_dates = [
-    pd.to_datetime('{}-{}-{}'.format(i, j, z),
-        format='%Y-%m-%d') for i,j,z in zip(year, mon, day)
-    ]
-
 Current Code Owner: MPI-BGC, Evgenii Churiulin
 phone:  +49  170 261-5104
 email:  evgenychur@bgc-jena.mpg.de
@@ -36,13 +27,10 @@ import numpy as np
 import pandas as pd
 from matplotlib import rcParams
 import matplotlib.pyplot as plt
-
-
 # 1.2 Personal module
 import lib4processing as l4p
 import lib4system_suport as l4s
 import lib4visualization as l4v
-
 # =============================   Personal functions   =====================
 
 # ================   User settings (have to be adapted)  ===================
@@ -111,7 +99,6 @@ lst4plot_settings = {
         # marker size  (if 'mode' = 'line'    -> not active)
         'msize'  : [   ms ,   ms   ,    ms   ],
     },
-
     # Uniq settings for plot with 2 lines:
     'plot2_bar'  : {
         'mode'   : ['bar'] * 2,
@@ -122,7 +109,6 @@ lst4plot_settings = {
         'mstyle' : ['' , '' ],
         'msize'  : [ms , ms ],
     },
-    
     'plot1'  : {
         'mode'   : ['line'],
         'label'  : ['Q'],
@@ -132,7 +118,6 @@ lst4plot_settings = {
         'mstyle' : ['' ],
         'msize'  : [ms ],
     },
-
     # -- Common settings for all plots:
     # legend location
     'l_location' : 'upper left',
@@ -178,38 +163,32 @@ y_step = [  50.0,  25.0 ]
 
 #=============================    Main program   ==============================
 if __name__ == '__main__':
-    
     # -- Create output folder
     pout = l4s.makefolder(pout)
     # -- Cleaning previous results:
     l4s.clean_history(pout)
-    
     # -- Get initial data
     lst4sd = []       # SD data
     lst4swe = []      # SWE data
     lst4t2m_prec = [] # T2m, Prec data
-    
     for station in lst4stations:
         # -- Input path
         pin_sd       = pin + f'/SD/{station}.txt'
         pin_swe      = pin + f'/SWE/{station}.txt'
         pin_t2m_prec = pin + f'/T2M-PREC/{station}.txt'
-        
+
         # -- Read data
         lst4sd.append(l4p.get_meteo_ru_sd(pin_sd))
         lst4swe.append(l4p.get_meteo_ru_swe(pin_swe))
         lst4t2m_prec.append(l4p.get_meteo_ru_t2m_prec(pin_t2m_prec)) 
 
-    
     # -- Create complex plot:
     for  tr in range(len(t1)):
-        
         # Create a timestep labels for plot names    
         t1_out = str(t1[tr])[0:4] + str(t1[tr])[5:7] + str(t1[tr])[8:10]
         t2_out = str(t2[tr])[0:4] + str(t2[tr])[5:7] + str(t2[tr])[8:10]
 
         period = pd.date_range(t1[tr], t2[tr], freq = 'D')
-
         # Cycle by stations
         for j in range(len(lst4stations)):
             t2m_min  = lst4t2m_prec[j]['T2m_min'][period].resample(step).mean()
@@ -222,7 +201,6 @@ if __name__ == '__main__':
 
             # -- Create a zero DataFrame for precipitation data:
             df_zero = pd.DataFrame(data = np.full((len(prec),2),-9999))
-
             # Create data timeseries for different type of precipitations:
             prec_liq = pd.Series(df_zero[0].values, index = prec.index, dtype = 'float')
             prec_sol = pd.Series(df_zero[1].values, index = prec.index, dtype = 'float')
@@ -238,7 +216,6 @@ if __name__ == '__main__':
 
             # Create plots
             fig = plt.figure(figsize = (14,10))
-
             # -- Задание координатной сетки и места где будут располагаться графики
             egrid = (4,4)
             ax1 = plt.subplot2grid(egrid, (0,0), colspan = 4)
@@ -247,7 +224,6 @@ if __name__ == '__main__':
             # add subplot in plot ax3
             bx1 = ax3.twinx()      
             ax4 = plt.subplot2grid(egrid, (3,0), colspan = 4)
-
             #Работа с формой для комплексного графика
             rcParams['figure.subplot.left']   = 0.1  # Левая граница
             rcParams['figure.subplot.right']  = 0.95 # Правая граница
@@ -279,7 +255,6 @@ if __name__ == '__main__':
             plt.savefig(
                 f'{pout}/Station_{lst4stations[j]}_{t1_out}_{t2_out}.png',
                 format='png', dpi = 300)
-
             plt.close(fig)
             plt.gcf().clear()
 

@@ -21,29 +21,25 @@ Version    Date       Name
     1.2    24.04.2023 Evgenii Churiulin, MPI-BGC
            Updating script 
 """
-
-#=============================     Import modules     ======================
+# =============================     Import modules     =====================
 import os
 import matplotlib.pyplot as plt
 from matplotlib import rcParams
-
 # -- Import personal modules:
 import lib4system_suport    as l4s
 import lib4processing       as l4p
 import lib4visualization    as l4v
 import lib4time_periods     as l4tp
+# =============================   Personal functions   =====================
 
-#=============================   Personal functions   =========================
-
-#================   User settings (have to be adapted)  =======================
+# ================   User settings (have to be adapted)  ===================
 
 # User settings for time filter:
-# --          Option 1      Option 2      Option 3        
+# --          Option 1      Option 2      Option 3
 ref_date1 = '2011-10-01' # '2010-10-01' #'2011-01-01'
 ref_date2 = '2012-04-30' # '2001-04-30' #'2012-12-31'
 n_periods = 7            #     18       #     5
 years2add = 1            #     1        #     1  
-
 
 # User settings for plots:
 ws =  1.0 # line size
@@ -61,7 +57,7 @@ lst4plot_settings = {
         'mstyle' : [  ''       ],
         'msize'  : [   ms      ],
     },
-    
+
     # Uniq settings for plot with 1 lines (Precipitations for 12 hours):
     'plot1_prec12' : {
         # Plot type ('line', 'scatter')
@@ -72,8 +68,8 @@ lst4plot_settings = {
         'wstyle' : [   ws      ],
         'mstyle' : [  ''       ],
         'msize'  : [   ms      ],
-    },    
-    
+    },
+
     # Uniq settings for plot with 1 lines (Snow depth):
     'plot1_snow_sd' : {
         # Plot type ('line', 'scatter')
@@ -84,7 +80,7 @@ lst4plot_settings = {
         'wstyle' : [   ws       ],
         'mstyle' : [  ''        ],
         'msize'  : [   ms       ],
-    }, 
+    },
     # Uniq settings for plot with 1 lines (Dew point):
     'plot1_dew' : {
         # Plot type ('line', 'scatter')
@@ -96,7 +92,7 @@ lst4plot_settings = {
         'mstyle' : [  ''       ],
         'msize'  : [   ms      ],
     },
-    
+
     # Uniq settings for plot with 1 lines (Wind):
     'plot1_wind' : {
         'mode'   : ['line'  ],
@@ -126,8 +122,7 @@ lst4plot_settings = {
         'wstyle' : [   ws      ,   ws           ],
         'mstyle' : [  ''       ,   ''           ],
         'msize'  : [   ms      ,   ms           ],
-    }, 
-    
+    },
     # Uniq settings for plot with 2 lines (Air pressure):
     'plot2_pres' : {
         # Plot type ('line', 'scatter')
@@ -138,8 +133,7 @@ lst4plot_settings = {
         'wstyle' : [   ws ,   ws    ],
         'mstyle' : [  ''  ,   ''    ],
         'msize'  : [   ms ,   ms    ],
-    },     
-    
+    },
     # Uniq settings for plot with 3 lines (Temperatures):
     'plot3' : {
         # Plot type ('line', 'scatter')
@@ -157,7 +151,6 @@ lst4plot_settings = {
         # marker size  (if 'mode' = 'line'    -> not active)
         'msize'  : [   ms ,   ms    ,    ms   ],
     },
-
     # -- Common settings for all plots:
     # legend location
     'l_location' : 'upper left',
@@ -171,13 +164,12 @@ lst4plot_settings = {
     'rotation'   : 0.0,
     # size of numbers for X and Y axes
     'fsize'      : 14.0,
-    
     # Uniq settings for plots:     
     't2m_plot' : {
         'plt_label'  : 'Температура воздуха',
         'y_label'    : 'Температура, С',
         'ylimits'    : [-30.0, 30.1, 15],
-    },            
+    },
     'tsoil_plot' : {
         'plt_label'  : 'Температуры поверхности почвы',
         'y_label'    : 'Температура, С',
@@ -221,16 +213,13 @@ lst4plot_settings = {
     },
 }
 
-
 #================   User settings (have to be adapted)  =======================
- 
 # Input and output paths:
 pin  = 'D:/Churyulin/DV/result_1_month_2011_2019'
 pout = 'D:/Churyulin/DV/result_plot_2011_2019'
 
 # Select parameters for research:
 params_opt = 'basic'
-
 #=============================    Main program   ==============================
 # Create output folder:
 l4s.makefolder(pout)
@@ -239,7 +228,6 @@ l4s.makefolder(pout)
 l4s.cleah_history(pout) 
 
 for file in os.listdir(pin):
-          
     # Get data from csv files:
     df = l4p.get_csv_data(f'{pin}/{file}')      
     print ('Columns:', df.columns)
@@ -251,19 +239,19 @@ for file in os.listdir(pin):
     rcParams['figure.subplot.top']    = 0.95 # Верхняя граница
     rcParams['figure.subplot.hspace'] = 0.4  # Общая высота, выделенная для свободного пространства между subplots
 
-    #-- Create time filter (winter values):   
+    #-- Create time filter (winter values):
     periods = l4tp.get_time_periods(
-        ref_date1, ref_date2, n_periods, years2add)  
+        ref_date1, ref_date2, n_periods, years2add)
 
     #-- Apply time filter (winter values):
     for k in range(n_periods):
         # -- Select time range (y1 - start; y2 - stop)
         y1 = periods[k][0]
         y2 = periods[k][1]
-        
+
         y1_out = str(y1)[0:11]
         y2_out = str(y2)[0:11]
-                        
+
         # -- Get parameters for complex plot:
         # ps - давление на уровне станции (гПа)
         ts_ps     = df['ps'][y1:y2]
@@ -289,28 +277,27 @@ for file in os.listdir(pin):
         ts_t_g    = df['t_g'][y1:y2]
         # hsnow - 
         ts_hsnow  = df['hSnow'][y1:y2]
-            
+
         if params_opt == 'basic':
             # ff10m - скорость ветра (м/сек) на высоте 10 метров
             ts_ff10m = df['ff10m'][y1:y2]
-        
+
         if params_opt == 'full':
             # ff10mean - скорость ветра (м/сек) на высоте 10 метров (MEAN)
             ts_ff10mean = df['ff10meanm'][y1:y2]
             # ff10max - скорость ветра (м/сек) на высоте 10 метров (MAX)
             ts_ff10max  = df['ff10max'][y1:y2]           
-            
-            
+
         # -- Create the first complex plot:    
         fig = plt.figure(figsize = (14,10))
-            
+
         #Задание координатной сетки и места где будут располагаться графики
         egrid = (4,4)
         ax1 = plt.subplot2grid(egrid, (0,0), colspan = 4)
         ax2 = plt.subplot2grid(egrid, (1,0), colspan = 4)
         ax3 = plt.subplot2grid(egrid, (2,0), colspan = 4)
         ax4 = plt.subplot2grid(egrid, (3,0), colspan = 4)
-        
+
         try:
             # График для температура воздуха: 
             l4v.create_plot(
@@ -321,7 +308,6 @@ for file in os.listdir(pin):
             l4v.create_plot(ax3, [ts_td2m], set4plots, 'dew_plot', 'plot1_dew')            
             # График для давления:
             l4v.create_plot(ax4, [ts_ps, ts_pmsl], set4plots, 'air_plot', 'plot2_pres')
-            
             # Save plot
             plt.savefig(
                 f'{pout}/Complex_plot1_{file[0:5]}_{y1_out}_{y2_out}.png', 
@@ -329,19 +315,17 @@ for file in os.listdir(pin):
                 dpi = 300)
             # Clear figure
             plt.gcf().clear()
-            
         except NameError as error:
             print ( 'Exception: Complex plot - 1', error )    
-        
+
         # -- Create the second complex plot:  
         fig2 = plt.figure(figsize = (14,10))
-                
+
         #Задание координатной сетки и места где будут располагаться графики
         egrid_2 = (3,4)
         bx1 = plt.subplot2grid(egrid_2, (0,0), colspan = 4)
         bx2 = plt.subplot2grid(egrid_2, (1,0), colspan = 4)
         bx3 = plt.subplot2grid(egrid_2, (2,0), colspan = 4)   
-        
         try:
             # График для осадков за 12 час, мм - RAINS 
             l4v.create_plot(bx1, [ts_R12], set4plots, 'prec_12', 'plot1_prec12')
@@ -349,7 +333,6 @@ for file in os.listdir(pin):
             l4v.create_plot(bx2, [ts_R24], set4plots, 'prec_24', 'plot1_prec24')
             #График для высоты снежного покрова, см
             l4v.create_plot(bx3, [ts_hsnow], set4plots, 'sd_plot', 'plot1_snow_sd')
-            
             # Save plot
             plt.savefig(
                 f'{pout}/Complex_plot2_{file[0:5]}_{y1_out}_{y2_out}.png',
@@ -358,18 +341,15 @@ for file in os.listdir(pin):
             )
             # Clean figure
             plt.gcf().clear()  
-            
         except NameError as error:
             print ( 'Exception: ', error )
-            
-        # -- Create the trird complex plot: 
+
+        # -- Create the trird complex plot:
         fig3 = plt.figure(figsize = (14,10))
-            
         #Задание координатной сетки и места где будут располагаться графики
         egrid_3 = (2,4)
         cx1 = plt.subplot2grid(egrid_3, (0,0), colspan = 4)
         cx2 = plt.subplot2grid(egrid_3, (1,0), colspan = 4)
-        
         try:
             # График для ff10m - скорость ветра (м/сек) на высоте 10 метров
             if params_opt == 'basic':
@@ -381,7 +361,7 @@ for file in os.listdir(pin):
             
             # График для dd10m - направления ветра (град) на высоте 10 метров   
             l4v.create_plot(cx2, [ts_dd10m], set4plots, 'w_plot', 'plot1_wind')
-            # Save plot                    
+            # Save plot
             plt.savefig(
                 f'{pout}/Complex_plot3_{file[0:5]}_{y1_out}_{y2_out}.png',
                 format='png',
@@ -389,7 +369,6 @@ for file in os.listdir(pin):
                 )
             # Clean figure
             plt.gcf().clear()
-            
         except NameError as error:
             print ( 'Exception: ', error )
 
