@@ -62,6 +62,65 @@ def get_time_periods4gif(ref_date:str, n_periods:int, days2add:int):
         periods.append([refer_step, act_step])
     return periods
 
+
+def get_decade_time_periods(years, months):
+    '''
+    Task: Create decade time periods
+
+    Parameters
+    ----------
+    years : Array --> Array with information about research years.
+    months : list --> List with information about selected months
+
+    Returns
+    -------
+    periods --> list
+    '''
+
+    # Local variables:
+    # Months with 31 days:
+    months_31 = ['01', '03', '05', '07', '08', '10', '12']
+    # leap years:
+    leap_years = np.arange(1700, 2100, 4)
+    # Time format
+    time_format = '%Y-%m-%d'
+    # Select days (first and last) from the first decade:
+    t1_start = '01'
+    t1_end   = '10'
+    # Select days (first and last) from the second decade:
+    t2_start = '11'
+    t2_end   = '20'
+
+    # -- Create 2 lists with information about decade with leap years
+    t_start = []
+    t_stop = []
+    for yr in years:
+        for m in months:
+            # Select days (first and last) from the third decade:
+            t3_start = '21'
+            if m in months_31:
+                t3_end = '31'
+            elif m == '02':
+                t3_end = '29' if yr in leap_years else '28'
+            else:
+                t3_end = '30'
+            # Create lists:
+            t_start.extend([f'{yr}-{m}-{t1_start}',
+                            f'{yr}-{m}-{t2_start}',
+                            f'{yr}-{m}-{t3_start}'])
+
+            t_stop.extend([f'{yr}-{m}-{t1_end}',
+                           f'{yr}-{m}-{t2_end}',
+                           f'{yr}-{m}-{t3_end}'])
+    # -- Create time periods for time filter:
+    periods = []
+    if len(t_start) == len(t_stop):
+        for i in range(len(t_start)):
+            periods.append([datetime.strptime(t_start[i], time_format),
+                            datetime.strptime( t_stop[i], time_format)])
+    return periods
+
+
 def fixed_timestep():
     '''
     Task: Get timesteps for fixed snow survey measurements (field and forest)

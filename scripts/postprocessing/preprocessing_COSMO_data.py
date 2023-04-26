@@ -1,395 +1,276 @@
 # -*- coding: utf-8 -*-
 """
-Created on Mon Mar 19 13:57:38 2018
+Description: Script for data processing of COSMO data
 
-@author: Evgeny Churiulin
-Скрипт позволяет работать с данными приходящими из модели Космо и осреднять их
+Authors: Evgenii Churiulin
+
+Current Code Owner: MPI-BGC, Evgenii Churiulin
+phone:  +49  170 261-5104
+email:  evgenychur@bgc-jena.mpg.de
+
+History:
+Version    Date       Name
+---------- ---------- ----
+    1.1    19.03.2018 Evgenii Churiulin, RHMS
+           Initial release
+    1.2    26.04.2023 Evgenii Churiulin, MPI-BGC
+           Prepared v2.0
 """
-import pandas as pd
+# =============================     Import modules     =====================
+# 1.1: Standard modules
 import os
-import gc
+import pandas as pd
+import numpy  as np
+# 1.2 Personal module
+import lib4system_suport as l4s
 
-def cosmo(iPath, fileName, outPath):
-    #fileName = 'data20160101.txt' # Name of the meteorological station - model version
-    #iPath_1 = 'C:/Python_script/msu_cosmo/{}'.format(fileName)
-    widths = [6,2,2,2,2, 8, 4, 6, 12, 12, 11, 12, 12, 12] 
-    df = pd.read_fwf(iPath, widths=widths, skiprows=8, skip_footer=0, header = 0) 
-    #df.columns = ['YYYY', 'MM', 'DD', 'HH','mm','LEVEL','GPI','GPJ','RLON','RLAT',
-    #'T_2M','TD_2M','RELHUM_2M','QV_S','TOT_PREC']
-    df.columns = ['YYYY', 'MM', 'DD', 'HH','mm','LEVEL','GPI','GPJ','RLON','RLAT',
-                  'T_2M','TD_2M','RELHUM_2M','QV_S']
-    #print 'Columns:', df.columns 
+# =============================   Personal functions   ====================
+# Support function: Get metainformation about grid points!
+def get_meta_data():
+    # Task:Load excel file with additional metainformation about grid points
+    df = pd.read_excel('D:/Churyulin/msu_cosmo/forecast/Meta.xlsx')
+    # -- Select data from EXCEL meta file:
+    df_refer = pd.concat([df.iloc[:,5], df.iloc[:,6], df.iloc[:,0]], axis = 1)
+    # Rename columns:
+    df_refer.columns = ['GPI','GPJ','ID_station']
+    return df_refer
+# end function
 
-    year = df.iloc[:,0]
+# Support function: Create new time index based on columns from Dataframe:
+def create_time_index(df):
+    year  = df.iloc[:,0]
     month = df.iloc[:,1]
-    day = df.iloc[:,2]
-    hour = df.iloc[:,3]
-    #minute = df.iloc[:,4]
-    meteo_dates = [pd.to_datetime('{}-{}-{}-{}'.format(i, j, z, k), format='%Y-%m-%d-%H') for i,j,z,k in zip(year, month,day,hour)] 
-    gpi = pd.Series(df['GPI'].values, index=meteo_dates)
-    gpj = pd.Series(df['GPJ'].values, index=meteo_dates)
-    rlon = pd.Series(df['RLON'].values, index=meteo_dates)
-    rlat = pd.Series(df['RLAT'].values, index=meteo_dates)
-    t_2m = pd.Series(df['T_2M'].values, index=meteo_dates)
-    td_2m = pd.Series(df['TD_2M'].values, index=meteo_dates)
-    relhum_2m = pd.Series(df['RELHUM_2M'].values, index=meteo_dates)
-    qv_s = pd.Series(df['QV_S'].values, index=meteo_dates)
-    #tot_prec = pd.Series(df['TOT_PREC'].values, index=meteo_dates) #ожидание
+    day   = df.iloc[:,2]
+    hour  = df.iloc[:,3]
+    # Create new time index
+    t_index = [
+        pd.to_datetime('{i}-{j}-{z}-{k}',
+                       format='%Y-%m-%d-%H') for i,j,z,k in zip(year, month, day, hour)]
+    return t_index
+# end function
 
-    gpi.index = gpj.index = rlon.index = rlat.index = t_2m.index = td_2m.index = relhum_2m.index = qv_s.index
-    df_2 = pd.concat([gpi, gpj, rlon, rlat, t_2m, td_2m, relhum_2m, qv_s], axis = 1)
-    df_2.columns = ['GPI','GPJ','RLON','RLAT','T_2M','TD_2M','RELHUM_2M','QV_S']
-    df_3 = df_2.groupby(['GPI','GPJ'], as_index=False).mean()
-    #print df_3
-    
-    """
-    gpi.index = gpj.index = tot_prec.index
-    df_prec = pd.concat([gpi, gpj, tot_prec], axis = 1)
-    df_prec.columns = ['GPI','GPJ','TOT_PREC']
+# Support function for reading COSMO data in txt format:
+def get_cosmo_txt(pin:str):
+    widths = [3, 1, 3, 1, 6, 1, 6, 1, 7, 1, 7, 1, 6, 1, 5, 1, 7]
+    return pd.read_fwf(
+        pin,
+        widths = widths,
+        skiprows = 0,
+        skip_footer = 0,
+        header = 0,
+        )
 
-    df_prec_itog = df_prec.groupby(['GPI','GPJ']).max()
-    df_4 = pd.concat([df_3,df_prec_itog], axis =1)
-    """
-    
-    #df_4.to_excel(outPath + 'data_' + fileName[4:12]+'.xlsx', float_format = '%.3f')
-    df_3.to_csv(outPath + 'data_' + fileName[4:12]+'.txt', sep = ',', float_format = '%.3f')
+# Reading COSMO data and groupby them by GPI and GPJ (Section 1)
+def get_mean_GPI_GPJ_data(iPath:str, fileName:str, outPath:str):
+    # Local variables:
+    pout = f'{outPath}data_{fileName[4:12]}.txt'
+    # Parameters for research:
+    params = ['GPI','GPJ','RLON','RLAT','T_2M','TD_2M','RELHUM_2M','QV_S']
+
+    # Open txt file with COSMO data:
+    widths = [6,2,2,2,2, 8, 4, 6, 12, 12, 11, 12, 12, 12]
+    df = pd.read_fwf(
+        iPath, widths = widths, skiprows = 8, skip_footer = 0, header = 0)
+    # Rename columns:
+    df.columns = [
+        'YYYY', 'MM', 'DD', 'HH','mm','LEVEL','GPI','GPJ','RLON','RLAT',
+        'T_2M','TD_2M','RELHUM_2M','QV_S']
+
+    # Create new index for data:
+    cosmo_index = create_time_index(df)
+
+    # Select data from dataframe by parameters and set new time index:
+    lst4series = []
+    for var in params:
+        lst4series.append(pd.Series(df[var].values, index = cosmo_index))
+    df_cosmo = pd.concat(lst4series, axis = 1)
+    df_cosmo.columns = params
+
+    # -- Groupby data by GPI and GPJ
+    df_cosmo_group = df_cosmo.groupby(['GPI','GPJ'], as_index = False).mean()
+    # -- Save prepared file:
+    df_cosmo_group.to_csv(pout, sep = ',', float_format = '%.3f')
     print ('calculated: ' + fileName[4:12])
-    gc.collect()
 
-"""
-#Чтение файлов из директории
-path_1 = 'C:/Python_script/msu_cosmo/2012/'
-path_2 = 'C:/Python_script/msu_cosmo/2013/'
-path_3 = 'C:/Python_script/msu_cosmo/2014/'
-path_4 = 'C:/Python_script/msu_cosmo/2015/'
-path_5 = 'C:/Python_script/msu_cosmo/2016/'
-"""
+# Reading COSMO data with precipitations:
+def get_cosmo_precipitation(iPath:str, fileName:str, outPath:str):
+    # -- Local variables:
+    # Output path for prepared data:
+    pout = f'{outPath}data_{fileName[5:13]}.csv'
+    # Indexes of the research parameters:
+    params = [0,2,4,6,8,10,12,14,16]
+    # Names of the research parameters:
+    params_names = [
+        'GPI','GPJ','RLON','RLAT','T_2M','TD_2M','RELHUM_2M','QV_S','TOT_PREC']
 
-#Чтение файлов из директории - данные для прогноза
-path_1 = 'D:/Churyulin/msu_cosmo/forecast/0-24/'
-path_2 = 'D:/Churyulin/msu_cosmo/forecast/24-48/'
-path_3 = 'D:/Churyulin/msu_cosmo/forecast/48-72/'
+    # -- Load COSMO data:
+    df = get_cosmo_txt(iPath)
+    # -- Select data from dataframe by parameters:
+    lst4series = []
+    for var in params:
+        lst4series.append(df.iloc[:,var])
+    df_cosmo = pd.concat(lst4series, axis = 1)
+    df_cosmo.columns = params_names
 
-"""
-#Запись результатов по директориям
-out_path_1 = 'C:/Python_script/msu_cosmo/results/2012/'
-out_path_2 = 'C:/Python_script/msu_cosmo/results/2013/'
-out_path_3 = 'C:/Python_script/msu_cosmo/results/2014/'
-out_path_4 = 'C:/Python_script/msu_cosmo/results/2015/'
-out_path_5 = 'C:/Python_script/msu_cosmo/results/2016/'
-"""
-#Запись результатов по директориям - данные для прогноза
-out_path_1 = 'D:/Churyulin/msu_cosmo/forecast/result_oper/0-24/'
-out_path_2 = 'D:/Churyulin/msu_cosmo/forecast/result_oper/24-48/'
-out_path_3 = 'D:/Churyulin/msu_cosmo/forecast/result_oper/48-72/'
+    # -- Load metadata for grid points:
+    df_meta = get_meta_data()
 
+    # -- Merge 2 dataframes:
+    result = pd.merge(
+        df_meta, df_cosmo, on = ['GPI','GPJ'], suffixes = ['_l', '_r'])
 
-"""
-dirs_cosmo_2012 = os.listdir(path_1)
-dirs_cosmo_2013 = os.listdir(path_2) 
-dirs_cosmo_2014 = os.listdir(path_3)
-dirs_cosmo_2015 = os.listdir(path_4) 
-dirs_cosmo_2016 = os.listdir(path_5)
-"""
-dirs_cosmo_0_24 = os.listdir(path_1)
-dirs_cosmo_24_48 = os.listdir(path_2) 
-dirs_cosmo_48_72 = os.listdir(path_3)
-
-"""
-#Чтение из директории по данным cosmo за 2012
-for file in dirs_cosmo_2012:
-    fileName_1 = file
-    iPath_1 = (path_1 + fileName_1)
-    data_1 = cosmo(iPath_1, fileName_1, out_path_1)
-   
-#Чтение из директории по данным cosmo за 2013  
-for file in dirs_cosmo_2013:
-    fileName_2 = file
-    iPath_2 = (path_2 + fileName_2)
-    data_2 = cosmo(iPath_2, fileName_2, out_path_2)
-    
-#Чтение из директории по данным cosmo за 2014    
-for file in dirs_cosmo_2014:
-    fileName_3 = file
-    iPath_3 = (path_3 + fileName_3)
-    data_3 = cosmo(iPath_3, fileName_3, out_path_3)
-
-#Чтение из директории по данным cosmo за 2015    
-for file in dirs_cosmo_2015:
-    fileName_4 = file
-    iPath_4 = (path_4 + fileName_4)
-    data_4 = cosmo(iPath_4, fileName_4, out_path_4)
-
-#Чтение из директории по данным cosmo за 2016    
-for file in dirs_cosmo_2016:
-    fileName_5 = file
-    iPath_5 = (path_5 + fileName_5)
-    data_5 = cosmo(iPath_5, fileName_5, out_path_5)
-"""
-
-#Чтение из директории по данным cosmo за срок 0 - 24 часа
-
-for file in dirs_cosmo_0_24:
-    fileName_1 = file
-    iPath_1 = (path_1 + fileName_1)
-    data_1 = cosmo(iPath_1, fileName_1, out_path_1)
-   
-
-  
-#Чтение из директории по данным cosmo за срок 24 - 48 часов 
-for file in dirs_cosmo_24_48:
-    fileName_2 = file
-    iPath_2 = (path_2 + fileName_2)
-    data_2 = cosmo(iPath_2, fileName_2, out_path_2)
-
-    
-#Чтение из директории по данным cosmo за срок 48 - 72 часа   
-for file in dirs_cosmo_48_72:
-    fileName_3 = file
-    iPath_3 = (path_3 + fileName_3)
-    data_3 = cosmo(iPath_3, fileName_3, out_path_3)
-    
-    # -*- coding: utf-8 -*-
-"""
-Created on Thu Apr 19 15:10:16 2018
-
-@author: Evgeny Churiulin
-Скрипт предназначен для нахождения осадков для метеорологических станций в данных полученных по Cosmo-Ru ETR
-"""
-import pandas as pd
-import numpy as np
-import os
-#fileName = 'data_20180101.txt' # Name of the meteorological station - model version
-#iPath_1 = 'C:/Python_script/msu_cosmo/forecast/result/test/{}'.format(fileName)
-
-#Функция для считывания данных из файлов
-def meteodata_cosmo(iPath):
-    #df = pd.read_csv(iPath_csv, sep=';')
-    #widths = [3,1,3,1,6,1, 6, 1, 7, 1, 7, 1, 6, 1, 5,1,6,1,10]
-    
-    #df = pd.read_csv(iPath, widths=widths, skiprows=0, skip_footer=0, header = 0)
-    df = pd.read_csv(iPath, sep = ',', header = 0)
-    #df.columns = ['GPI','1','GPJ','2','RLON','3','RLAT','4','T_2M','5','TD_2M','6','RELHUM_2M','7','QV_S','8','TOT_PREC','9','ID_station']
-    #df = df.drop(['1','2','3','4','5','6','7','8','9'],axis = 1)
-    return df
-
-def cosmo_precipitation(iPath, fileName, outPath):
-    #Подгружаем информацию из excel файла. В файле excel хранится информация о ближайших узлах 
-    fileName_excel = 'Meta.xlsx' # Name of the meteorological station - model version
-    iPath_excel = 'D:/Churyulin/msu_cosmo/forecast/{}'.format(fileName_excel)
-    data_meta = pd.read_excel(iPath_excel)
-    index_id = data_meta.iloc[:,0]
-    lon_point = data_meta.iloc[:,5]
-    lat_point = data_meta.iloc[:,6]
-    lon_point.index = lat_point.index = index_id.index
-    df_4 = pd.concat([lon_point, lat_point, index_id], axis = 1)
-    df_4.columns = ['GPI','GPJ','ID_station']
-    
-    #Считываем исходную метеорологическую информацию из данных по модели COSMO-Ru
-    widths = [3,1,3,1,6,1, 6, 1, 7, 1, 7, 1, 6, 1, 5,1,7]  
-    df = pd.read_fwf(iPath, widths=widths, skiprows=0, skip_footer=0, header = 0) 
-    #print 'Columns:', df_test.columns 
-    gpi = df.iloc[:,0]
-    gpj = df.iloc[:,2]
-    rlon = df.iloc[:,4]
-    rlat = df.iloc[:,6]
-    t_2m = df.iloc[:,8]
-    td_2m = df.iloc[:,10]
-    relhum_2m = df.iloc[:,12]
-    qv_s = df.iloc[:,14]
-    tot_prec = df.iloc[:,16]
-
-    gpi.index = gpj.index = rlon.index = rlat.index = t_2m.index = td_2m.index = relhum_2m.index = qv_s.index = tot_prec.index
-    df_2 = pd.concat([gpi, gpj, rlon, rlat, t_2m, td_2m, relhum_2m, qv_s, tot_prec], axis = 1)
-    df_2.columns = ['GPI','GPJ','RLON','RLAT','T_2M','TD_2M','RELHUM_2M','QV_S','TOT_PREC']
-    
-    result = pd.merge(df_2, df_4, on=['GPI','GPJ'], suffixes=['_l', '_r'])
-    result.to_csv(outPath + 'data_' + fileName[5:13]+'.csv', float_format = '%.3f', index = False)
-        
-    print ('calculated: ' + fileName[5:13])
+    # -- Save processed data:
+    result.to_csv(pout, float_format = '%.3f', index = False)
+    print (f'calculated: {fileName[5:13]}')
     return result
-  
-def cosmo_model(data_csv,csv_data, path_exit):
+
+# Get COSMO data for meteorological station:
+def get_cosmo_precipitation_maket(data_csv:list, path_in:str, path_exit:str):
+    # Create array
     maket_data = ''
-    for file_data in data_csv:
-        fileName_csv = file_data
-        iPath_csv = (csv_data + fileName_csv)
-        
-        df_temp = meteodata_cosmo(iPath_csv)
-        if len(maket_data)>0:
+    for file in data_csv:
+        df_temp = pd.read_csv(path_in + file, sep = ',', header = 0)
+        if len(maket_data)> 0:
             maket_data = pd.concat([maket_data, df_temp])
         else:
             maket_data = df_temp
         print ('Идет сортировка данных:')
-    #Сортировка данных
+
+    # Data sorting
     for i in maket_data['ID_station']:
-        result_data = maket_data[maket_data['ID_station'].isin([i])]
-        result_data=result_data.drop(['ID_station'], axis = 1)
-        result_data = result_data.replace(np.nan, 0)
-        result_data.to_csv(path_exit + 'data_' + str(i) +'.csv', float_format = '%.3f', index = False)#, mode = 'a')    
+        result_data = (
+            maket_data[maket_data['ID_station'].isin([i])]
+                .drop(['ID_station'], axis = 1)
+                .replace(np.nan, 0)
+        )
+        result_data.to_csv(
+            path_exit + 'data_' + str(i) +'.csv',
+            float_format = '%.3f', index = False)
 
+# Get COSMO data for stations with precipitations:
+def cosmo_model(data_csv:list, path_in:str, path_exit:str):
+    # -- Local variables:
+    # Indexes of the research parameters:
+    params = [0,2,4,6,8,10,12,14,16]
+    # Names of the research parameters:
+    params_names = [
+        'GPI', 'GPJ', 'RLON', 'RLAT', 'T_2M', 'TD_2M', 'RELHUM_2M', 'QV_S',
+        'TOT_PREC' ]
 
-#Чтение файлов из директории - данные для прогноза (исходные данные)
-path_1 = 'D:/Churyulin/msu_cosmo/forecast/achive/result_archive/0-24/'
-path_2 = 'D:/Churyulin/msu_cosmo/forecast/achive/result_archive/24-48/'
-path_3 = 'D:/Churyulin/msu_cosmo/forecast/achive/result_archive/48-72/'
+    # -- Load metadata for grid points:
+    df_meta = get_meta_data()
 
-#Запись результатов по директориям - данные для прогноза (Выборка метеоузлов, в соответствии с заданными метеостанциями)
-out_path_1 = 'D:/Churyulin/msu_cosmo/forecast/presipitation/0 - 24/'
-out_path_2 = 'D:/Churyulin/msu_cosmo/forecast/presipitation/24 - 48/'
-out_path_3 = 'D:/Churyulin/msu_cosmo/forecast/presipitation/48 - 72/'
-
-
-dirs_cosmo_0_24 = os.listdir(path_1)
-dirs_cosmo_24_48 = os.listdir(path_2) 
-dirs_cosmo_48_72 = os.listdir(path_3)
-
-
-#Чтение из директории по данным cosmo за срок 0 - 24 часа
-for file in dirs_cosmo_0_24:
-    fileName_1 = file
-    iPath_1 = (path_1 + fileName_1)
-    data_1 = cosmo_precipitation(iPath_1, fileName_1, out_path_1)
-      
-#Чтение из директории по данным cosmo за срок 24 - 48 часов 
-for file in dirs_cosmo_24_48:
-    fileName_2 = file
-    iPath_2 = (path_2 + fileName_2)
-    data_2 = cosmo_precipitation(iPath_2, fileName_2, out_path_2)
-    
-#Чтение из директории по данным cosmo за срок 48 - 72 часа   
-for file in dirs_cosmo_48_72:
-    fileName_3 = file
-    iPath_3 = (path_3 + fileName_3)
-    data_3 = cosmo_precipitation(iPath_3, fileName_3, out_path_3)
-
-#Запись результатов по директориям - данные для прогноза, отсортированные по станционно
-path_exit_1 = 'D:/Churyulin/msu_cosmo/forecast/presipitation/final_result_station/0 - 24/'
-path_exit_2 = 'D:/Churyulin/msu_cosmo/forecast/presipitation/final_result_station/24 - 48/'
-path_exit_3 = 'D:/Churyulin/msu_cosmo/forecast/presipitation/final_result_station/48 - 72/'
-
-#Файлы в директории, после поиска нужных метеостанций
-dirs_precipitation_0_24 = os.listdir(out_path_1)
-dirs_precipitation_24_48 = os.listdir(out_path_2)
-dirs_precipitation_48_72 = os.listdir(out_path_3)
-
-#Очистка папок для вывода финального результата
-dirs_result_1 = os.listdir(path_exit_1)
-for file in dirs_result_1:
-    os.remove(path_exit_1 + file)
-    
-dirs_result_2 = os.listdir(path_exit_2)
-for file in dirs_result_2:
-    os.remove(path_exit_2 + file)
-    
-dirs_result_3 = os.listdir(path_exit_3)
-for file in dirs_result_3:
-    os.remove(path_exit_3 + file)
-
-#Запуск сортировки данных по конкретным метеостанциям
-data_precipitation_1 = cosmo_model(dirs_precipitation_0_24, out_path_1, path_exit_1)
-data_precipitation_2 = cosmo_model(dirs_precipitation_24_48, out_path_2, path_exit_2)
-data_precipitation_3 = cosmo_model(dirs_precipitation_48_72, out_path_3, path_exit_3)
-
-# -*- coding: utf-8 -*-
-"""
-Created on Tue Apr 24 16:32:55 2018
-
-@author:Evgeny
-"""
-
-import pandas as pd
-import numpy as np
-import os
-
-#fileName_excel = 'Meta.xlsx' # Name of the meteorological station - model version
-#iPath_excel = 'C:/Python_script/msu_cosmo/msu_meteo_real/{}'.format(fileName_excel)
-
-#Функция для считывания данных из файлов
-def meteodata_cosmo(iPath):
-    #df = pd.read_csv(iPath_csv, sep=';')
-    widths = [3,1,3,1,6,1, 6, 1, 7, 1, 7, 1, 6, 1, 5,1,7]  
-    df = pd.read_fwf(iPath, widths=widths, skiprows=0, skip_footer=0, header = 0)
-    return df
-
-def cosmo_model(data_csv,csv_data, path_exit):
-    fileName_excel = 'Meta.xlsx' # Name of the meteorological station - model version
-    iPath_excel = 'D:/Churyulin/msu_cosmo/forecast/{}'.format(fileName_excel)
-    
-    
     #Объявление и назначение массива
     maket_data = ''
-
     for file in data_csv:
-        fileName_csv = file
-        iPath_csv = (csv_data + fileName_csv)
-        df_temp = meteodata_cosmo(iPath_csv)
-        if len(maket_data)>0:
+        df_temp = get_cosmo_txt(path_in + file)
+        if len(maket_data) > 0:
             maket_data = pd.concat([maket_data, df_temp])
         else:
             maket_data = df_temp
         print ('Calculated:')
-        
-    data_meta = pd.read_excel(iPath_excel)
 
-    index_id = data_meta.iloc[:,0]
-    lon_point = data_meta.iloc[:,5]
-    lat_point = data_meta.iloc[:,6]
+    # -- Select data from dataframe by parameters:
+    lst4series = []
+    for var in params:
+        lst4series.append(maket_data.iloc[:,var])
+    df_cosmo = pd.concat(lst4series, axis = 1)
+    df_cosmo.columns = params_names
 
-    lon_point.index = lat_point.index = index_id.index
-    df_4 = pd.concat([lon_point, lat_point, index_id], axis = 1)
-    df_4.columns = ['GPI','GPJ','ID_station']
-    #print 'Columns:', df_test.columns 
-    gpi = maket_data.iloc[:,0]
-    gpj = maket_data.iloc[:,2]
-    rlon = maket_data.iloc[:,4]
-    rlat = maket_data.iloc[:,6]
-    t_2m = maket_data.iloc[:,8]
-    td_2m = maket_data.iloc[:,10]
-    relhum_2m = maket_data.iloc[:,12]
-    qv_s = maket_data.iloc[:,14]
-    tot_prec = maket_data.iloc[:,16]
-
-    gpi.index = gpj.index = rlon.index = rlat.index = t_2m.index = td_2m.index = relhum_2m.index = qv_s.index = tot_prec.index
-    df_2 = pd.concat([gpi, gpj, rlon, rlat, t_2m, td_2m, relhum_2m, qv_s, tot_prec], axis = 1)
-    df_2.columns = ['GPI','GPJ','RLON','RLAT','T_2M','TD_2M','RELHUM_2M','QV_S','TOT_PREC']
-    
-    result = pd.merge(df_2, df_4, on=['GPI','GPJ'], suffixes=['_l', '_r'])
+    # -- Merge data:
+    result = pd.merge(df_cosmo, df_meta, on=['GPI','GPJ'], suffixes=['_l', '_r'])
 
     #Сортировка данных
     for i in result['ID_station']:
-        result_data = result[result['ID_station'].isin([i])]
-        result_data=result_data.drop(['ID_station'], axis = 1)
-        result_data = result_data.replace(np.nan, 0)
-        result_data.to_csv(path_exit + 'data_' + str(i) +'.csv', float_format = '%.3f', index = False)#, mode = 'a')
-        return result
-#Указание путей к данным входные/выходные данные
-path_exit_0_24 = 'C:/Python_script/msu_cosmo/forecast/result/test/0 - 24 result/'
-csv_data_0_24 = 'C:/Python_script/msu_cosmo/forecast/result/test/0 - 24/'
-path_exit_24_48 = 'C:/Python_script/msu_cosmo/forecast/result/test/24 - 48 result/'
-csv_data_24_48 = 'C:/Python_script/msu_cosmo/forecast/result/test/24 - 48/'
-path_exit_48_72 = 'C:/Python_script/msu_cosmo/forecast/result/test/48 - 72 result/'
-csv_data_48_72 = 'C:/Python_script/msu_cosmo/forecast/result/test/48 - 72/'
+        result_data = (
+            result[result['ID_station'].isin([i])]
+                .drop(['ID_station'], axis = 1)
+                .replace(np.nan, 0)
+        )
+        #  Save output file:
+        result_data.to_csv(
+            f'{path_exit}data_{i}.csv', float_format = '%.3f', index = False)
+    return result
 
-dirs_csv_0_24 = os.listdir(csv_data_0_24)
-dirs_csv_24_48 = os.listdir(csv_data_24_48)
-dirs_csv_48_72 = os.listdir(csv_data_48_72)
+# ================   User settings (have to be adapted)  ==================
+lprep_calc = True            # Do you want to run preprocessing of COSMO data (True / False)
+lyear = False                # Do you use yerly data (archive) or quasi operational data (True / False)
+lprep_precipitations = True  # Do you want to run preprocessing of COSMO data with precipitations? (True / False)
+lcalc4stations = True        # Do you want to get COSMO data for stations?
+lcalc4prec = False           # Do you want to additional data processing?
 
-#Очистка папок с результатами модельного счета перед выполнением новой расчетной процедуры
-dirs_result = os.listdir(path_exit_0_24)
-for file in dirs_result:
-    os.remove(path_exit_0_24 + file)
+#=============================    Main program   ==============================
+if __name__ == '__main__':
+    # Preprocessing COSMO data.
+    if lprep_calc is True:
+        # Yearly data
+        if lyear is True:
+            # Section 1: Get mean values of COSMO parameters by GPI and GPJ
+            main = 'C:/Python_script/msu_cosmo'
+            years = [2012, 2013, 2014, 2015, 2016]
+            for yr in years:
+                # Temporal input and output paths:
+                pin  = f'{main}/{yr}/'
+                pout = f'{main}/results/{yr}/'
+                # Data preprocessing (Get, Read and save to the new .csv file)
+                for file in os.listdir(f'{pin}/'):
+                    df = get_mean_GPI_GPJ_data(f'{pin}/file', pin, pout)
 
-dirs_result = os.listdir(path_exit_24_48)
-for file in dirs_result:
-    os.remove(path_exit_24_48 + file)
+        # Data from time periods (0 - 72 hours)
+        else:
+            # Section 1: Get mean values of COSMO parameters by GPI and GPJ
+            main = 'D:/Churyulin/msu_cosmo/forecast'
+            cosmo_folders = ['0-24', '24-48', '48-72']
+            for folder in cosmo_folders:
+                # Input and output folders:
+                pin = main + f'/{folder}/'
+                pout = main + f'/result_oper/{folder}/'
+                # Data preprocessing (Get, Read and save to the new .csv file)
+                for file in os.listdir(f'{pin}/'):
+                    df = get_mean_GPI_GPJ_data(f'{pin}/file', pin, pout)
 
-dirs_result = os.listdir(path_exit_48_72)
-for file in dirs_result:
-    os.remove(path_exit_48_72 + file)
+    # Preprocessing COSMO precipitation data
+    if lprep_precipitations is True:
+        # -- Section 3: Preprocessing of COSMO presipitation data
+        main = 'D:/Churyulin/msu_cosmo/forecast'
+        cosmo_folders = ['0-24', '24-48', '48-72']
+        cosmo_outputs = ['0 - 24', '24 - 48', '48 - 72']
+        for i in range(len(cosmo_folders)):
+            # Input and output folders:
+            pin = main + f'/achive/result_archive/{cosmo_folders[i]}'
+            pout = main + f'/presipitation/{cosmo_outputs[i]}/'
+            # Make output folders and cleaning previous results:
+            pout = l4s.makefolder(pout)
+            l4s.clean_history(pout)
+            # Data preprocessing (Get, Read and save to the new .csv file)
+            for file in os.listdir(f'{pin}/'):
+                df = get_cosmo_precipitation(f'{pin}/file', file, pout)
 
-#Запуск основной расчетной функции модели
-data_1 = cosmo_model(dirs_csv_0_24, csv_data_0_24, path_exit_0_24) 
-data_2 = cosmo_model(dirs_csv_24_48, csv_data_24_48, path_exit_24_48) 
-data_3 = cosmo_model(dirs_csv_48_72, csv_data_48_72, path_exit_48_72)    
+    if lcalc4stations is True:
+        # -- Section 3, Step 2 --> Further work with COSMO presipitation
+        main = 'D:/Churyulin/msu_cosmo/forecast/presipitation'
+        cosmo_folders = ['0 - 24', '24 - 48', '48 - 72']
+        for folder in cosmo_folders:
+            # Input and output folders:
+            pin = main + f'/{folder}/'
+            pout = main + f'/final_result_station/{folder}/'
+            # Make output folders and cleaning previous results:
+            pout = l4s.makefolder(pout)
+            l4s.clean_history(pout)
+            # Run data processing (Sorting data by meteostations):
+            df = get_cosmo_precipitation_maket(os.listdir(f'{pin}/'), pin, pout)
 
+    if lcalc4prec is True:
+        # -- Section 4. Create COSMO makets for stations with precipitations
+        main = 'C:/Python_script/msu_cosmo/forecast'
+        cosmo_folders = ['0 - 24', '24 - 48', '48 - 72']
+        cosmo_outputs = ['0 - 24 result','24 - 48 result','48 - 72 result']
+        for folder in range(len(cosmo_folders)):
+            # Input and output folders:
+            pin  = main + f'/result/{cosmo_folders[i]}/'
+            pout = main + f'/result/{cosmo_outputs[i]}/'
+            # Make output folders and cleaning previous results:
+            pout = l4s.makefolder(pout)
+            l4s.clean_history(pout)
+            # Run data processing (Sorting data by meteostations):
+            df = cosmo_model(os.listdir(pin), pin, pout)

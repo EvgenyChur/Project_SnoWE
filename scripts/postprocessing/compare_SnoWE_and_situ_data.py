@@ -82,7 +82,7 @@ else:
     n_periods = 46
     ref_date  = '2011-09-01'
     days2add  = 5
-    
+
 # Settings for plots:
 lst4plot_settings = {
     # Common settings for plots: 
@@ -119,9 +119,9 @@ lst4plot_settings = {
         'plt_label'  : 'Snow water equivalent',
         'y_label'    : 'Snow water equivalent, mm',
         'ylimits'    : [0.0, 151.1, 15.0],
-    },  
-} 
-    
+    },
+}
+
 kg2g = 1000.0 # convert kg to gramm
 #=============================    Main program   ==============================
 if __name__ == '__main__': 
@@ -129,7 +129,7 @@ if __name__ == '__main__':
     pout = l4s.makefolder(pout)
     # -- clean previous results:
     l4s.clean_history(pout)
-    
+
     # Data preprocessing. Select data for stations from and save the as 
     # separete .csv files:
     if lprep_data is  True:
@@ -174,7 +174,7 @@ if __name__ == '__main__':
             )
     else:
         print('Data had been prepared early')
-        
+
     # Main data processing part
     if lmain_mode is True:
         print('Main calculations:')    
@@ -207,8 +207,8 @@ if __name__ == '__main__':
                 lst4plot_settings.get('xlimits')[1] = t2 # xmax
             else:
                 lst4plot_settings.get('xlimits')[0] = periods[0][0]  # xmin
-                lst4plot_settings.get('xlimits')[1] = periods[-1][1] # xmax            
-       
+                lst4plot_settings.get('xlimits')[1] = periods[-1][1] # xmax
+
             # -- Create plots:
             fig = plt.figure(figsize = (14,10))
             # -- Settings for plot with subplots
@@ -218,21 +218,21 @@ if __name__ == '__main__':
             rcParams['figure.subplot.bottom'] = 0.1
             rcParams['figure.subplot.top']    = 0.95
             rcParams['figure.subplot.hspace'] = 0.4
-               
+
             # -- Setting the coordinate grid and the place where the graphs will be located
             egrid = (3,4)
             ax1 = plt.subplot2grid(egrid, (0,0), colspan = 4)
             ax2 = plt.subplot2grid(egrid, (1,0), colspan = 4)
             ax3 = plt.subplot2grid(egrid, (2,0), colspan = 4)
-            
+
             # -- Create plots (SD, RHO, SWE):
             l4v.create_plot(
                 ax1,
                 #           model                in-situ 
-                [df_snowe['depth'][t1:t2], df_situ['sd'][t1:t2]], 
+                [df_snowe['depth'][t1:t2], df_situ['sd'][t1:t2]],
                 lst4plot_settings, 
                 'sd_plot' )
-            
+
             l4v.create_plot(
                 ax2,
                 #             model                  in-situ
@@ -240,7 +240,7 @@ if __name__ == '__main__':
                 lst4plot_settings,
                 'rho_plot'
             )
-            
+
             l4v.create_plot(
                 ax3,
                 #           model                in-situ
@@ -248,11 +248,11 @@ if __name__ == '__main__':
                 lst4plot_settings,
                 'swe_plot',
             )
-              
+
             # -- Save plot:
             t1_out = str(t1)[0:11]
             t2_out = str(t2)[0:11]
-            
+
             output_plot = f'{pout}/plot_{ds_snow[0:5]}_{t1_out}_{t2_out}.png'
             plt.savefig(output_plot, format = 'png', dpi = 300) 
             plt.gcf().clear()

@@ -51,7 +51,6 @@ def get_statistic(
     Returns
     -------
     df_statistic : Dataframe --> Dataframe with statistical information.
-
     ''' 
     # Select SnoWE, ECOMAG and field survey data
     if lfield_stations is True:
@@ -59,9 +58,9 @@ def get_statistic(
     # Select forest stations:
     if lforest_stations is True:
         df_data_stat = pd.concat((df_list[0:6] + df_list[7:])[0:7], axis = 1)
-    
+
     # Rename columns
-    new_columns = lst4delta + [refer]               
+    new_columns = lst4delta + [refer]
     for i in range(len(list(df_data_stat.columns.values))):
         df_data_stat = df_data_stat.rename(
             columns = {
@@ -73,19 +72,19 @@ def get_statistic(
         df_data_stat = df_data_stat[np.isfinite(df_data_stat[refer])]
     # Clean NaN values (by forest)
     if lforest_stations is True:
-        df_data_stat = df_data_stat.dropna(axis = 'rows',thresh = 3)                      
-                    
+        df_data_stat = df_data_stat.dropna(axis = 'rows',thresh = 3)
+
     # Calculation statistical parameters:
     try:
         df_statistic = l4stat.cal_stat_values(df_data_stat, lst4delta, refer)
     except NameError as error:
         print ('Exception in field stations: ', error)
-    
+
     #  Save as a new output .csv file       
     df_statistic.to_csv(f'{pout_stat}/{id_station}_{t1_out}_{t2_out}.csv',
-                        sep = ';', float_format = '%.3f')                   
+                        sep = ';', float_format = '%.3f')
     return df_statistic
- 
+
 def cal_coef(df_model1, df_model2, df_model3, t2m, pout_csv):
     '''
     Task: Calculations of correction coefficient for SnoWE and ECOMAG data
@@ -124,16 +123,14 @@ def cal_coef(df_model1, df_model2, df_model3, t2m, pout_csv):
     df_data_koef.columns = [name4k_model, name4in_situ, name4t2m]
                 
     df_data_koef.to_csv(
-        pout_csv, 
+        pout_csv,
         sep = ';',
         float_format = '%.3f',
-        header = [name4k_model,name4in_situ,name4t2m], 
+        header = [name4k_model,name4in_situ,name4t2m],
         index_label = 'Date'
     )
-    
     return df_data_koef
 
-   
 #================   User settings (have to be adapted)  =======================
 # Logical parameters:
 lprep_calc       = True  # Do you want to preprocess data for work?
@@ -376,9 +373,8 @@ if lmain_calc is True:
             'ylimits'    : [0.0, 301.1, 50.0],
         }, 
     }
-    
+
     param = 'swe'
-    
 #=============================    Main program   ==============================
 
 # Подготовительная стадия. Цель подготовить исходные данные для работы
@@ -410,26 +406,26 @@ if lmain_calc is True:
         #-- Create time filter (winter values):   
         periods = l4tp.get_time_periods(
             ref_date1, ref_date2, n_periods, years2add)
-    
+
         #-- Apply time filter (winter values):
         for t in range(n_periods):
             # -- Select time range (t1 - start; t2 - stop)
             t1 = periods[t][0]
             t2 = periods[t][1]
-            
+
             # -- Convert t1 and t2 to str for output files in csv and png formats:
             t1_out = str(t1)[0:11]
             t2_out = str(t2)[0:11]
-            
+
             # -- Define time settings for x axis
             lst4plot_settings.get('xlimits')[0] = t1 # xmin
             lst4plot_settings.get('xlimits')[1] = t2 # xmax
-            
+
             # -- Get data with time filter:
             winter_data4station = []
             for i in range(len(data4station)):
                 winter_data4station.append(data4station[i][param][t1:t2])
-        
+
             # --Section: Statistical analysis.
             if lstat_calc is True:
                 # Select SnoWE, ECOMAG and field survey data
@@ -474,8 +470,7 @@ if lmain_calc is True:
                 except NameError as error:
                     print ( 'Exception: Problem with visualization - SD. ', error )
             # End of visualization section
-        
-        
+
             # Section: Calculating recalculation coefficients.
             if lrecal_coef is True:
                 pout_csv = f'{pout_data}/{id_station}_{t1_out}_{t2_out}.csv'
@@ -491,4 +486,3 @@ if lmain_calc is True:
             # end of section  
         # end of time step
     # end of calculations for station
-        
